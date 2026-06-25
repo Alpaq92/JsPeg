@@ -23,6 +23,7 @@ export { JpegOptimizer } from './JpegOptimizer.js';
 export {
   componentsToRGBA, readAdobeTransform, rgbToYCbCrPlanes, rgbToGrayPlane, buildJfifApp0,
 } from './colorConverter.js';
+export { readExifOrientation, applyOrientation } from './exif.js';
 
 import { JpegDecoder } from './JpegDecoder.js';
 import { JpegEncoder } from './JpegEncoder.js';
@@ -34,6 +35,7 @@ import { JpegStandardHuffmanEncodingTable } from './JpegStandardHuffmanEncodingT
 import {
   componentsToRGBA, readAdobeTransform, rgbToYCbCrPlanes, rgbToGrayPlane, buildJfifApp0,
 } from './colorConverter.js';
+import { readExifOrientation, applyOrientation } from './exif.js';
 
 /** Coerce common inputs (ArrayBuffer, Buffer, typed array) to a Uint8Array. */
 function toUint8Array(data) {
@@ -50,7 +52,8 @@ function toUint8Array(data) {
  *   width: number, height: number, precision: number,
  *   numberOfComponents: number, componentIds: number[],
  *   components: Int16Array[], adobeTransform: number|null,
- *   quality: number|null, progressive: boolean, startOfFrame: number
+ *   orientation: number, quality: number|null, progressive: boolean,
+ *   startOfFrame: number
  * }}
  */
 export function decodeComponents(input) {
@@ -79,6 +82,7 @@ export function decodeComponents(input) {
     componentIds,
     components: writer.components,
     adobeTransform: readAdobeTransform(data),
+    orientation: readExifOrientation(data),
     quality: q.ok ? q.quality : null,
     progressive: decoder.startOfFrame === 0xc2,
     startOfFrame: decoder.startOfFrame,
@@ -87,19 +91,31 @@ export function decodeComponents(input) {
 
 /**
  * Decode a JPEG into an interleaved RGBA buffer (canvas ImageData compatible).
+ * The EXIF orientation is applied by default, so the result is display-ready
+ * (width/height are swapped for 90°/270° rotations); pass `applyOrientation:
+ * false` to get the raw pixel grid. The raw EXIF value is always on `orientation`.
  * @param {Uint8Array|ArrayBuffer} input
- * @returns {{ width: number, height: number, data: Uint8ClampedArray }}
+ * @param {{ applyOrientation?: boolean }} [options]
+ * @returns {{ width: number, height: number, data: Uint8ClampedArray, orientation: number }}
  */
-export function decode(input) {
+export function decode(input, options = {}) {
   const result = decodeComponents(input);
-  const rgba = componentsToRGBA({
+  let rgba = componentsToRGBA({
     width: result.width,
     height: result.height,
     components: result.components,
     componentIds: result.componentIds,
     adobeTransform: result.adobeTransform,
   });
-  return { ...result, data: rgba };
+  let { width, height } = result;
+
+  if (options.applyOrientation !== false && result.orientation !== 1) {
+    const oriented = applyOrientation(rgba, width, height, result.orientation);
+    rgba = oriented.data;
+    width = oriented.width;
+    height = oriented.height;
+  }
+  return { ...result, width, height, data: rgba };
 }
 
 const SUBSAMPLING = {

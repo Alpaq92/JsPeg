@@ -16,7 +16,8 @@ runs locally in your browser, nothing is uploaded.
 ## What it does
 
 - **Decode** baseline, extended-sequential, progressive, and lossless JPEG;
-  4:4:4 / 4:2:2 / 4:2:0 subsampling; grayscale / YCbCr / RGB / CMYK.
+  4:4:4 / 4:2:2 / 4:2:0 subsampling; grayscale / YCbCr / RGB / CMYK; applies EXIF
+  orientation.
 - **Encode** baseline JPEG with standard or optimized Huffman tables.
 - **Optimize** an existing JPEG — re-codes the Huffman tables losslessly
   (identical pixels, smaller file).
@@ -62,8 +63,10 @@ The inverse DCT is **[stb_image](https://github.com/nothings/stb) DNA** — port
 from there (public domain) — so the whole project is single-license MIT; it
 tracks libjpeg's accurate IDCT closely. The forward DCT is an original exact
 transform. Subsampled chroma is upsampled by replication, like the original.
-CMYK and YCCK (Adobe APP14) 4-component images decode to RGB. 12-bit precision,
-arithmetic coding (SOF9/10), and EXIF orientation are out of scope.
+CMYK and YCCK (Adobe APP14) 4-component images decode to RGB, and EXIF
+orientation is read from the APP1 segment and applied by `decode()` (pass
+`applyOrientation: false` to opt out). 12-bit precision and arithmetic coding
+(SOF9/10) are out of scope.
 
 ## License
 

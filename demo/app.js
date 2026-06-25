@@ -98,7 +98,7 @@ async function showJpeg(bytes) {
 
   paint($('decodeCanvas'), img.data, img.width, img.height);
   decodePanel.hidden = false;
-  renderMeta($('decodeMeta'), [
+  const rows = [
     ['Dimensions', `${img.width} × ${img.height}`],
     ['Components', String(meta.numberOfComponents)],
     ['Mode', meta.progressive ? 'progressive' : 'baseline'],
@@ -106,7 +106,11 @@ async function showJpeg(bytes) {
     ['Est. quality', meta.quality != null ? `~${meta.quality.toFixed(1)}` : 'n/a'],
     ['Decoded in', `${ms.toFixed(1)} ms`],
     ['File size', fmtBytes(bytes.length)],
-  ]);
+  ];
+  if (img.orientation !== 1) {
+    rows.splice(1, 0, ['EXIF orientation', `${img.orientation} (applied)`]);
+  }
+  renderMeta($('decodeMeta'), rows);
 
   // the decoded pixels become the source for re-encoding
   currentRGBA = { width: img.width, height: img.height, data: img.data };

@@ -3,42 +3,17 @@
 // component samples). Conversion is chosen from component count + the optional
 // Adobe APP14 transform, matching common decoder behaviour (libjpeg / pdf.js).
 import { JpegMarker } from './JpegMarker.js';
+import { findAppSegment } from './markerScan.js';
 
 /**
  * Scan a JPEG byte stream for the Adobe APP14 color transform.
  * @returns {number|null} 0 (none/RGB/CMYK), 1 (YCbCr), 2 (YCCK), or null if absent
  */
 export function readAdobeTransform(data) {
-  let offset = 2; // skip SOI
-  const len = data.length;
-  while (offset + 4 <= len) {
-    if (data[offset] !== 0xff) {
-      offset++;
-      continue;
-    }
-    let marker = data[offset + 1];
-    // collapse fill bytes
-    while (marker === 0xff && offset + 2 < len) {
-      offset++;
-      marker = data[offset + 1];
-    }
-    offset += 2;
-    if (marker === JpegMarker.StartOfScan || marker === JpegMarker.EndOfImage) break;
-    if (marker === JpegMarker.Padding || marker === 0) continue;
-    // standalone markers (RSTn, SOI, TEM) have no length
-    if ((marker >= 0xd0 && marker <= 0xd9) || marker === 0x01) continue;
-    if (offset + 2 > len) break;
-    const segLen = (data[offset] << 8) | data[offset + 1];
-    if (marker === JpegMarker.App14 && segLen >= 14) {
-      // "Adobe" signature then version(2) flags0(2) flags1(2) transform(1)
-      const p = offset + 2;
-      if (data[p] === 0x41 && data[p + 1] === 0x64 && data[p + 2] === 0x6f && data[p + 3] === 0x62 && data[p + 4] === 0x65) {
-        return data[offset + 2 + 11];
-      }
-    }
-    offset += segLen;
-  }
-  return null;
+  // APP14 "Adobe", then version(2) flags0(2) flags1(2) transform(1).
+  const seg = findAppSegment(data, JpegMarker.App14, [0x41, 0x64, 0x6f, 0x62, 0x65]);
+  if (seg === null || seg.start + 6 >= seg.end) return null;
+  return data[seg.start + 6];
 }
 
 function clampByte(v) {
