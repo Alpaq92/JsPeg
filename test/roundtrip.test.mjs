@@ -4,29 +4,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { encode, decode } from '../src/index.js';
-
-function makeImage(w, h) {
-  const data = new Uint8Array(w * h * 4);
-  const cx = w / 2;
-  const cy = h / 2;
-  for (let y = 0; y < h; y++) {
-    for (let x = 0; x < w; x++) {
-      const i = (y * w + x) * 4;
-      data[i] = Math.round((x / Math.max(w - 1, 1)) * 255);
-      data[i + 1] = Math.round((y / Math.max(h - 1, 1)) * 255);
-      data[i + 2] = Math.round((Math.sin(Math.hypot(x - cx, y - cy) / 4) * 0.5 + 0.5) * 255);
-      data[i + 3] = 255;
-    }
-  }
-  // a couple of solid blocks for sharp edges
-  for (let y = (h / 4) | 0; y < (h / 2) | 0; y++) {
-    for (let x = (w / 4) | 0; x < (w / 2) | 0; x++) {
-      const i = (y * w + x) * 4;
-      data[i] = 240; data[i + 1] = 30; data[i + 2] = 30;
-    }
-  }
-  return data;
-}
+import { makeScene } from './_image.mjs';
 
 function errorVsSource(rgba, src, w, h) {
   let sum = 0;
@@ -43,14 +21,17 @@ function errorVsSource(rgba, src, w, h) {
 
 const W = 80;
 const H = 64;
-const source = makeImage(W, H);
+const source = makeScene(W, H);
 
+// The mean is the correctness gate (kept tight); the max is loose because JPEG
+// ringing + chroma subsampling legitimately spike single channels at the sharp
+// sun/river edges of the scene.
 const cases = [
-  { name: '4:4:4 q92', opts: { quality: 92, subsampling: '4:4:4' }, meanTol: 2.5, maxTol: 24 },
-  { name: '4:2:2 q90', opts: { quality: 90, subsampling: '4:2:2' }, meanTol: 5, maxTol: 45 },
-  { name: '4:2:0 q90', opts: { quality: 90, subsampling: '4:2:0' }, meanTol: 6, maxTol: 50 },
-  { name: '4:2:0 q75 optimized', opts: { quality: 75, subsampling: '4:2:0', optimizeCoding: true }, meanTol: 8, maxTol: 95 },
-  { name: '4:4:4 q95 package-merge', opts: { quality: 95, subsampling: '4:4:4', optimizeCoding: true, mostOptimalCoding: true }, meanTol: 2, maxTol: 20 },
+  { name: '4:4:4 q92', opts: { quality: 92, subsampling: '4:4:4' }, meanTol: 2.5, maxTol: 42 },
+  { name: '4:2:2 q90', opts: { quality: 90, subsampling: '4:2:2' }, meanTol: 4, maxTol: 75 },
+  { name: '4:2:0 q90', opts: { quality: 90, subsampling: '4:2:0' }, meanTol: 5, maxTol: 105 },
+  { name: '4:2:0 q75 optimized', opts: { quality: 75, subsampling: '4:2:0', optimizeCoding: true }, meanTol: 6, maxTol: 130 },
+  { name: '4:4:4 q95 package-merge', opts: { quality: 95, subsampling: '4:4:4', optimizeCoding: true, mostOptimalCoding: true }, meanTol: 2, maxTol: 28 },
 ];
 
 for (const c of cases) {
@@ -89,7 +70,7 @@ test('round-trip grayscale q90', () => {
 test('round-trip odd dimensions 37x19', () => {
   const w = 37;
   const h = 19;
-  const src = makeImage(w, h);
+  const src = makeScene(w, h);
   const jpg = encode({ width: w, height: h, data: src, channels: 4 }, { quality: 90, subsampling: '4:2:0' });
   const img = decode(jpg);
   assert.equal(img.width, w);

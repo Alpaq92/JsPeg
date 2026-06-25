@@ -152,6 +152,15 @@ output { color: var(--text); font-variant-numeric: tabular-nums; min-width: 2ch;
   font-size: 0.9rem;
 }
 
+/* Bottom action row: Encode on the left, Download on the right. */
+.actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 1rem;
+}
+.actions .download { margin-top: 0; }
+
 footer {
   text-align: center;
   padding: 2rem 1rem;

@@ -7,7 +7,7 @@ import { JpegScanHeader, JpegScanComponentSpecificationParameters } from './Jpeg
 import { JpegHuffmanEncodingTableCollection } from './JpegHuffmanEncodingTableCollection.js';
 import { JpegHuffmanEncodingComponent } from './JpegHuffmanEncodingComponent.js';
 import { JpegBlockAllocator } from './JpegBlockAllocator.js';
-import { transformFDCT } from './FastFloatingPointDCT.js';
+import { transformFDCT } from './dct.js';
 import { bufferIndexToBlock } from './JpegZigZag.js';
 import { roundToInt16, log2 } from './JpegMathHelper.js';
 
@@ -222,7 +222,6 @@ export class JpegEncoder {
     const buffer = allocator.buffer;
     const inputF = new Float32Array(64);
     const outputF = new Float32Array(64);
-    const tempF = new Float32Array(64);
 
     for (let rowMcu = 0; rowMcu < mcusPerColumn; rowMcu++) {
       for (let colMcu = 0; colMcu < mcusPerLine; colMcu++) {
@@ -241,7 +240,7 @@ export class JpegEncoder {
               const off = allocator.getBlockOffset(index, offsetX + x, blockOffsetY);
               readBlock(inputReader, buffer, off, index, (offsetX + x) * 8 * hs, blockOffsetY * 8 * vs, hs, vs);
               shiftDataLevel(buffer, off, inputF, levelShift);
-              transformFDCT(inputF, outputF, tempF);
+              transformFDCT(inputF, outputF);
               zigZagAndQuantize(component.quantizationTable, outputF, buffer, off);
             }
           }
@@ -329,7 +328,6 @@ export class JpegEncoder {
     const inputBuffer = new Int16Array(64);
     const inputF = new Float32Array(64);
     const outputF = new Float32Array(64);
-    const tempF = new Float32Array(64);
 
     for (let rowMcu = 0; rowMcu < mcusPerColumn; rowMcu++) {
       const offsetY = rowMcu * maxV;
@@ -345,7 +343,7 @@ export class JpegEncoder {
             for (let x = 0; x < h; x++) {
               readBlock(inputReader, inputBuffer, 0, component.index, (offsetX + x) * 8, blockOffsetY, hs, vs);
               shiftDataLevel(inputBuffer, 0, inputF, levelShift);
-              transformFDCT(inputF, outputF, tempF);
+              transformFDCT(inputF, outputF);
               zigZagAndQuantize(component.quantizationTable, outputF, inputBuffer, 0);
               encodeBlock(writer, component, inputBuffer, 0);
             }

@@ -5,7 +5,7 @@ import assert from 'node:assert/strict';
 import { blockIndexToBuffer, bufferIndexToBlock } from '../src/JpegZigZag.js';
 import { JpegBitReader } from '../src/JpegBitReader.js';
 import { JpegWriter } from '../src/JpegWriter.js';
-import { transformFDCT, transformIDCT } from '../src/FastFloatingPointDCT.js';
+import { transformFDCT, transformIDCT } from '../src/dct.js';
 import { JpegHuffmanDecodingTable } from '../src/JpegHuffmanDecodingTable.js';
 import { JpegStandardHuffmanEncodingTable } from '../src/JpegStandardHuffmanEncodingTable.js';
 import { JpegStandardQuantizationTable } from '../src/JpegStandardQuantizationTable.js';
@@ -75,21 +75,21 @@ test('FDCT and IDCT are an inverse pair', () => {
   }
   const freq = new Float32Array(64);
   const out = new Float32Array(64);
-  const tmp = new Float32Array(64);
-  transformFDCT(src, freq, tmp);
-  transformIDCT(freq, out, tmp);
+  transformFDCT(src, freq);
+  transformIDCT(freq, out);
 
+  // The forward transform is exact float; the inverse is stb's integer IDCT, so
+  // recovery is to within integer rounding (~±1) rather than bit-exact.
   let max = 0;
   for (let i = 0; i < 64; i++) max = Math.max(max, Math.abs(out[i] - src[i]));
-  assert.ok(max < 1e-2, `IDCT(FDCT(x)) recovers x (max diff ${max})`);
+  assert.ok(max < 1.5, `IDCT(FDCT(x)) recovers x (max diff ${max})`);
 });
 
 test('IDCT of a DC-only block is flat', () => {
   const freq = new Float32Array(64);
   freq[0] = 64; // pure DC
   const out = new Float32Array(64);
-  const tmp = new Float32Array(64);
-  transformIDCT(freq, out, tmp);
+  transformIDCT(freq, out);
   for (let i = 1; i < 64; i++) {
     assert.ok(Math.abs(out[i] - out[0]) < 1e-3, 'all samples equal for DC-only input');
   }

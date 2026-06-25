@@ -23,5 +23,7 @@ SOFTWARE.
 
 ---
 
-The forward/inverse DCT in src/FastFloatingPointDCT.js is derived from
-SixLabors.ImageSharp, which is licensed under the Apache License, Version 2.0.
+The inverse DCT in src/dct.js is ported from stb_image by Sean Barrett, which is
+released into the public domain (http://nothings.org/stb). The forward DCT is an
+original implementation. JsPeg therefore carries no license obligations beyond
+the MIT terms above.

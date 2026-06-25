@@ -15,7 +15,7 @@
     "ref": "gray_q50.ref",
     "width": 96,
     "height": 64,
-    "meanTol": 2.2,
+    "meanTol": 2.4,
     "maxTol": 18,
     "desc": "quality=50, subsampling=0"
   },
@@ -25,7 +25,7 @@
     "ref": "gray_odd_q85.ref",
     "width": 23,
     "height": 41,
-    "meanTol": 2.0,
+    "meanTol": 2.2,
     "maxTol": 16,
     "desc": "quality=85, subsampling=0"
   },
@@ -45,8 +45,8 @@
     "ref": "rgb_444_q92.ref",
     "width": 96,
     "height": 64,
-    "meanTol": 2.0,
-    "maxTol": 16,
+    "meanTol": 2.2,
+    "maxTol": 18,
     "desc": "quality=92, subsampling=0"
   },
   {
@@ -55,8 +55,8 @@
     "ref": "rgb_444_q75.ref",
     "width": 96,
     "height": 64,
-    "meanTol": 2.6,
-    "maxTol": 22,
+    "meanTol": 3.0,
+    "maxTol": 24,
     "desc": "quality=75, subsampling=0"
   },
   {
@@ -65,8 +65,8 @@
     "ref": "rgb_odd_444_q90.ref",
     "width": 37,
     "height": 19,
-    "meanTol": 2.4,
-    "maxTol": 20,
+    "meanTol": 2.6,
+    "maxTol": 22,
     "desc": "quality=90, subsampling=0"
   },
   {
@@ -76,7 +76,7 @@
     "width": 96,
     "height": 64,
     "meanTol": 5.0,
-    "maxTol": 110,
+    "maxTol": 120,
     "desc": "quality=85, subsampling=2"
   },
   {
@@ -86,7 +86,7 @@
     "width": 96,
     "height": 64,
     "meanTol": 5.0,
-    "maxTol": 70,
+    "maxTol": 80,
     "desc": "quality=85, subsampling=1"
   },
   {
@@ -95,8 +95,8 @@
     "ref": "rgb_prog_444_q88.ref",
     "width": 96,
     "height": 64,
-    "meanTol": 2.2,
-    "maxTol": 18,
+    "meanTol": 2.4,
+    "maxTol": 20,
     "desc": "quality=88, subsampling=0, progressive=True"
   },
   {
@@ -106,7 +106,7 @@
     "width": 96,
     "height": 64,
     "meanTol": 5.5,
-    "maxTol": 115,
+    "maxTol": 125,
     "desc": "quality=80, subsampling=2, progressive=True"
   }
 ]

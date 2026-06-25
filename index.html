@@ -48,11 +48,13 @@
             </select>
           </label>
           <label class="check"><input type="checkbox" id="optimize" checked /> Optimized Huffman</label>
-          <button id="encodeBtn" type="button">Encode</button>
         </div>
         <div class="canvas-wrap"><canvas id="encodeCanvas"></canvas></div>
         <dl id="encodeMeta" class="meta"></dl>
-        <a id="encodeDownload" class="download" hidden download="jspeg-output.jpg">Download JPEG</a>
+        <div class="actions">
+          <button id="encodeBtn" type="button">Encode</button>
+          <a id="encodeDownload" class="download" hidden download="jspeg-output.jpg">Download JPEG</a>
+        </div>
       </section>
 
       <section class="card" id="optimizePanel" hidden>

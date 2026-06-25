@@ -2,7 +2,7 @@
 // Port of JpegHuffmanBaselineScanDecoder.cs.
 import { JpegBitReader } from '../JpegBitReader.js';
 import { isRestartMarker, JpegMarker } from '../JpegMarker.js';
-import { transformIDCT } from '../FastFloatingPointDCT.js';
+import { transformIDCT } from '../dct.js';
 import { writeBlock } from '../JpegBlockOutputWriter.js';
 import {
   JpegHuffmanDecodingComponent,
@@ -70,7 +70,6 @@ export class JpegHuffmanBaselineScanDecoder {
 
     const blockF = new Float32Array(64);
     const outputF = new Float32Array(64);
-    const tempF = new Float32Array(64);
     const outputBuffer = new Int16Array(64);
 
     for (let rowMcu = 0; rowMcu < mcusPerColumn; rowMcu++) {
@@ -92,7 +91,7 @@ export class JpegHuffmanBaselineScanDecoder {
               this._readBlockBaseline(bitReader, component, outputBuffer);
 
               dequantizeBlockAndUnZigZag(component.quantizationTable, outputBuffer, 0, blockF);
-              transformIDCT(blockF, outputF, tempF);
+              transformIDCT(blockF, outputF);
               shiftDataLevel(outputF, outputBuffer, 0, levelShift);
 
               writeBlock(outputWriter, outputBuffer, 0, index, (offsetX + x) * 8, blockOffsetY, hs, vs);

@@ -3,7 +3,7 @@
 // dequantize + IDCT + level-shift + flush happens in dispose().
 import { JpegBitReader } from '../JpegBitReader.js';
 import { isRestartMarker, JpegMarker } from '../JpegMarker.js';
-import { transformIDCT } from '../FastFloatingPointDCT.js';
+import { transformIDCT } from '../dct.js';
 import { JpegBlockAllocator } from '../JpegBlockAllocator.js';
 import {
   JpegHuffmanDecodingComponent,
@@ -288,7 +288,6 @@ export class JpegHuffmanProgressiveScanDecoder {
 
     const blockF = new Float32Array(64);
     const outputF = new Float32Array(64);
-    const tempF = new Float32Array(64);
 
     // Final dequantize + IDCT + level shift over every stored block, iterating
     // the frame components directly so all components are processed correctly.
@@ -299,7 +298,7 @@ export class JpegHuffmanProgressiveScanDecoder {
         for (let bx = 0; bx < info.hBlocks; bx++) {
           const offset = (info.blockOffset + by * info.hBlocks + bx) * 64;
           dequantizeBlockAndUnZigZag(quant, buffer, offset, blockF);
-          transformIDCT(blockF, outputF, tempF);
+          transformIDCT(blockF, outputF);
           shiftDataLevel(outputF, buffer, offset, levelShift);
         }
       }
