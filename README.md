@@ -1,7 +1,7 @@
 # JsPeg
 
 A **pure-JavaScript JPEG decoder, encoder & optimizer** — no native modules, no
-WebAssembly, **zero dependencies**. Runs in Node and the browser.
+WebAssembly, and **zero dependencies**. Runs anywhere, in both Node and the browser.
 
 It is a faithful port of the C# library
 **[yigolden/JpegLibrary](https://github.com/yigolden/JpegLibrary)** (MIT).
