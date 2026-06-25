@@ -1,0 +1,17 @@
+# Keep text/source as LF in the repo and on checkout (consistent cross-platform).
+* text=auto
+
+*.js   text eol=lf
+*.mjs  text eol=lf
+*.json text eol=lf
+*.css  text eol=lf
+*.html text eol=lf
+*.md   text eol=lf
+*.yml  text eol=lf
+
+# Test fixtures and images are binary — never apply line-ending conversion.
+*.jpg  binary
+*.jpeg binary
+*.ref  binary
+*.png  binary
+*.ppm  binary

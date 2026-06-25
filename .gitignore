@@ -1,0 +1,18 @@
+node_modules/
+npm-debug.log*
+*.tgz
+
+# example outputs
+examples/*.ppm
+examples/out-*.jpg
+examples/fixture.ppm
+examples/decoded.ppm
+
+# local tooling
+.claude/
+
+# editor / OS
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

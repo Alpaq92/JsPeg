@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>JsPeg — pure-JavaScript JPEG codec</title>
+  <meta name="description" content="Decode, encode and losslessly optimize JPEG images in pure JavaScript, entirely in your browser." />
+  <link rel="stylesheet" href="demo/style.css" />
+</head>
+<body>
+  <header>
+    <h1>Js<span>Peg</span></h1>
+    <p class="tagline">A pure-JavaScript JPEG decoder, encoder &amp; optimizer — running entirely in your browser. No upload, no WebAssembly, no dependencies.</p>
+    <p class="links">
+      <a href="https://github.com/Alpaq92/JsPeg">GitHub</a>
+      ·
+      <a href="https://github.com/yigolden/JpegLibrary">ported from JpegLibrary (C#)</a>
+    </p>
+  </header>
+
+  <main>
+    <section id="drop" class="dropzone">
+      <input type="file" id="file" accept="image/*" hidden />
+      <p><strong>Drop an image here</strong> or <button id="pick" type="button">choose a file</button></p>
+      <p class="hint">Drop a <code>.jpg</code> to see JsPeg decode it; drop any image to re-encode it as JPEG. Everything stays on your device.</p>
+    </section>
+
+    <p id="status" class="status" hidden></p>
+
+    <div id="panels" hidden>
+      <section class="card" id="decodePanel" hidden>
+        <h2>Decoded by JsPeg</h2>
+        <div class="canvas-wrap"><canvas id="decodeCanvas"></canvas></div>
+        <dl id="decodeMeta" class="meta"></dl>
+      </section>
+
+      <section class="card" id="encodePanel">
+        <h2>Re-encode with JsPeg</h2>
+        <div class="controls">
+          <label>Quality <output id="qVal">80</output>
+            <input type="range" id="quality" min="1" max="100" value="80" />
+          </label>
+          <label>Subsampling
+            <select id="subsampling">
+              <option value="4:2:0">4:2:0</option>
+              <option value="4:2:2">4:2:2</option>
+              <option value="4:4:4">4:4:4</option>
+            </select>
+          </label>
+          <label class="check"><input type="checkbox" id="optimize" checked /> Optimized Huffman</label>
+          <button id="encodeBtn" type="button">Encode</button>
+        </div>
+        <div class="canvas-wrap"><canvas id="encodeCanvas"></canvas></div>
+        <dl id="encodeMeta" class="meta"></dl>
+        <a id="encodeDownload" class="download" hidden download="jspeg-output.jpg">Download JPEG</a>
+      </section>
+
+      <section class="card" id="optimizePanel" hidden>
+        <h2>Optimize losslessly</h2>
+        <p class="hint">Re-codes the existing baseline JPEG's Huffman tables. The decoded pixels stay identical — only the file shrinks.</p>
+        <button id="optimizeBtn" type="button">Optimize this JPEG</button>
+        <dl id="optimizeMeta" class="meta"></dl>
+        <a id="optimizeDownload" class="download" hidden download="jspeg-optimized.jpg">Download optimized JPEG</a>
+      </section>
+    </div>
+  </main>
+
+  <footer>
+    <p>MIT licensed. Built as a faithful port of <a href="https://github.com/yigolden/JpegLibrary">yigolden/JpegLibrary</a>.</p>
+  </footer>
+
+  <script type="module" src="demo/app.js"></script>
+</body>
+</html>

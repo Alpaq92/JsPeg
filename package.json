@@ -1,0 +1,33 @@
+{
+  "name": "jspeg",
+  "version": "0.1.0",
+  "description": "A pure-JavaScript JPEG decoder, encoder and optimizer. A faithful port of yigolden/JpegLibrary.",
+  "type": "module",
+  "main": "src/index.js",
+  "exports": {
+    ".": "./src/index.js"
+  },
+  "files": [
+    "src"
+  ],
+  "scripts": {
+    "test": "node --test",
+    "serve": "node tools/serve.mjs"
+  },
+  "keywords": [
+    "jpeg",
+    "jfif",
+    "decoder",
+    "encoder",
+    "optimizer",
+    "image",
+    "codec",
+    "baseline",
+    "progressive",
+    "lossless"
+  ],
+  "license": "MIT",
+  "engines": {
+    "node": ">=16"
+  }
+}

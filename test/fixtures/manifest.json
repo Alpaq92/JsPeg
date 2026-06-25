@@ -1,0 +1,112 @@
+[
+  {
+    "name": "gray_q90",
+    "file": "gray_q90.jpg",
+    "ref": "gray_q90.ref",
+    "width": 96,
+    "height": 64,
+    "meanTol": 1.6,
+    "maxTol": 12,
+    "desc": "quality=90, subsampling=0"
+  },
+  {
+    "name": "gray_q50",
+    "file": "gray_q50.jpg",
+    "ref": "gray_q50.ref",
+    "width": 96,
+    "height": 64,
+    "meanTol": 2.2,
+    "maxTol": 18,
+    "desc": "quality=50, subsampling=0"
+  },
+  {
+    "name": "gray_odd_q85",
+    "file": "gray_odd_q85.jpg",
+    "ref": "gray_odd_q85.ref",
+    "width": 23,
+    "height": 41,
+    "meanTol": 2.0,
+    "maxTol": 16,
+    "desc": "quality=85, subsampling=0"
+  },
+  {
+    "name": "gray_prog_q88",
+    "file": "gray_prog_q88.jpg",
+    "ref": "gray_prog_q88.ref",
+    "width": 96,
+    "height": 64,
+    "meanTol": 1.8,
+    "maxTol": 14,
+    "desc": "quality=88, subsampling=0, progressive=True"
+  },
+  {
+    "name": "rgb_444_q92",
+    "file": "rgb_444_q92.jpg",
+    "ref": "rgb_444_q92.ref",
+    "width": 96,
+    "height": 64,
+    "meanTol": 2.0,
+    "maxTol": 16,
+    "desc": "quality=92, subsampling=0"
+  },
+  {
+    "name": "rgb_444_q75",
+    "file": "rgb_444_q75.jpg",
+    "ref": "rgb_444_q75.ref",
+    "width": 96,
+    "height": 64,
+    "meanTol": 2.6,
+    "maxTol": 22,
+    "desc": "quality=75, subsampling=0"
+  },
+  {
+    "name": "rgb_odd_444_q90",
+    "file": "rgb_odd_444_q90.jpg",
+    "ref": "rgb_odd_444_q90.ref",
+    "width": 37,
+    "height": 19,
+    "meanTol": 2.4,
+    "maxTol": 20,
+    "desc": "quality=90, subsampling=0"
+  },
+  {
+    "name": "rgb_420_q85",
+    "file": "rgb_420_q85.jpg",
+    "ref": "rgb_420_q85.ref",
+    "width": 96,
+    "height": 64,
+    "meanTol": 5.0,
+    "maxTol": 110,
+    "desc": "quality=85, subsampling=2"
+  },
+  {
+    "name": "rgb_422_q85",
+    "file": "rgb_422_q85.jpg",
+    "ref": "rgb_422_q85.ref",
+    "width": 96,
+    "height": 64,
+    "meanTol": 5.0,
+    "maxTol": 70,
+    "desc": "quality=85, subsampling=1"
+  },
+  {
+    "name": "rgb_prog_444_q88",
+    "file": "rgb_prog_444_q88.jpg",
+    "ref": "rgb_prog_444_q88.ref",
+    "width": 96,
+    "height": 64,
+    "meanTol": 2.2,
+    "maxTol": 18,
+    "desc": "quality=88, subsampling=0, progressive=True"
+  },
+  {
+    "name": "rgb_prog_420_q80",
+    "file": "rgb_prog_420_q80.jpg",
+    "ref": "rgb_prog_420_q80.ref",
+    "width": 96,
+    "height": 64,
+    "meanTol": 5.5,
+    "maxTol": 115,
+    "desc": "quality=80, subsampling=2, progressive=True"
+  }
+]
