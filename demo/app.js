@@ -1,5 +1,6 @@
 // JsPeg browser demo. Everything runs locally — no network, no dependencies.
 import { decode, decodeComponents, encode, optimize } from '../src/index.js';
+import { SAMPLES } from './samples.js';
 
 const $ = (id) => document.getElementById(id);
 
@@ -65,6 +66,25 @@ async function handleFile(file) {
   } catch (err) {
     console.error(err);
     setStatus(`Could not process this file: ${err.message}`, true);
+  }
+}
+
+async function loadSample(sample) {
+  setStatus(`Generating the “${sample.name}” sample…`);
+  try {
+    const w = 384;
+    const h = 256;
+    const rgba = sample.make(w, h);
+    const jpg = encode(
+      { width: w, height: h, data: rgba, channels: 4 },
+      { quality: 92, subsampling: sample.gray ? '4:4:4' : '4:2:0', grayscale: sample.gray },
+    );
+    await showJpeg(jpg);
+    panels.hidden = false;
+    autoEncode();
+  } catch (err) {
+    console.error(err);
+    setStatus(`Could not generate sample: ${err.message}`, true);
   }
 }
 
@@ -196,3 +216,13 @@ dropzone.addEventListener('drop', (e) => {
 $('quality').addEventListener('input', () => { $('qVal').textContent = $('quality').value; });
 $('encodeBtn').addEventListener('click', doEncode);
 $('optimizeBtn').addEventListener('click', doOptimize);
+
+// build the "try a sample" chips
+for (const sample of SAMPLES) {
+  const btn = document.createElement('button');
+  btn.type = 'button';
+  btn.className = 'chip';
+  btn.textContent = sample.name;
+  btn.addEventListener('click', () => loadSample(sample));
+  $('samples').append(btn);
+}

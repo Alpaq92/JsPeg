@@ -79,6 +79,38 @@ button {
 button:hover { filter: brightness(1.08); }
 button:active { transform: translateY(1px); }
 
+/* "choose a file" reads as an inline link, not a heavy orange action button. */
+#pick {
+  background: none;
+  color: var(--accent-2);
+  border: 0;
+  padding: 0;
+  font: inherit;
+  font-weight: 600;
+  text-decoration: underline;
+  cursor: pointer;
+}
+#pick:hover { color: var(--accent); filter: none; }
+
+/* "try a sample" chips: subtle pills, distinct from the orange action buttons. */
+.samples {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+.chip {
+  background: var(--panel-2);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 0.3rem 0.85rem;
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+.chip:hover { border-color: var(--accent); filter: none; }
+
 .status {
   text-align: center;
   margin: 1rem 0;

@@ -4,7 +4,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { encode, decode } from '../src/index.js';
-import { makeScene } from './_image.mjs';
+import { makeScene, SAMPLES } from '../demo/samples.js';
 
 function errorVsSource(rgba, src, w, h) {
   let sum = 0;
@@ -23,9 +23,9 @@ const W = 80;
 const H = 64;
 const source = makeScene(W, H);
 
-// The mean is the correctness gate (kept tight); the max is loose because JPEG
-// ringing + chroma subsampling legitimately spike single channels at the sharp
-// sun/river edges of the scene.
+// Subsampling / quality matrix on the landscape. The mean is the correctness
+// gate (kept tight); the max is loose because JPEG ringing + chroma subsampling
+// legitimately spike single channels at the sharp sun/river edges.
 const cases = [
   { name: '4:4:4 q92', opts: { quality: 92, subsampling: '4:4:4' }, meanTol: 2.5, maxTol: 42 },
   { name: '4:2:2 q90', opts: { quality: 90, subsampling: '4:2:2' }, meanTol: 4, maxTol: 75 },
@@ -54,18 +54,28 @@ for (const c of cases) {
   });
 }
 
-test('round-trip grayscale q90', () => {
-  const jpg = encode({ width: W, height: H, data: source, channels: 4 }, { quality: 90, grayscale: true });
-  const img = decode(jpg);
-  assert.equal(img.numberOfComponents, 1);
-  // compare against the luma of the source
-  let sum = 0;
-  for (let i = 0; i < W * H; i++) {
-    const luma = 0.299 * source[i * 4] + 0.587 * source[i * 4 + 1] + 0.114 * source[i * 4 + 2];
-    sum += Math.abs(img.data[i * 4] - luma);
-  }
-  assert.ok(sum / (W * H) <= 3, 'grayscale round-trip mean within tolerance');
-});
+// Every built-in sample (grayscale, rainbow, colour bars, pure green, landscape)
+// round-trips faithfully across colour and subsampled encodes — the mean is the
+// correctness gate over very different content.
+for (const sample of SAMPLES) {
+  test(`round-trip sample: ${sample.name}`, () => {
+    const w = 96;
+    const h = 64;
+    const src = sample.make(w, h);
+    for (const [opts, meanTol] of [
+      [{ quality: 92, subsampling: '4:4:4' }, 2.5],
+      [{ quality: 88, subsampling: '4:2:0' }, 4.5],
+    ]) {
+      const jpg = encode({ width: w, height: h, data: src, channels: 4 }, { ...opts, grayscale: sample.gray });
+      const img = decode(jpg);
+      assert.equal(img.width, w);
+      assert.equal(img.height, h);
+      if (sample.gray) assert.equal(img.numberOfComponents, 1, 'grayscale sample stays single-component');
+      const { mean } = errorVsSource(img.data, src, w, h);
+      assert.ok(mean <= meanTol, `${sample.name} ${opts.subsampling} q${opts.quality}: mean ${mean.toFixed(2)} > ${meanTol}`);
+    }
+  });
+}
 
 test('round-trip odd dimensions 37x19', () => {
   const w = 37;
