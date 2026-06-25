@@ -85,31 +85,31 @@ export function applyOrientation(rgba, width, height, orientation) {
     return { data: rgba, width, height };
   }
 
-  const swap = orientation >= 5; // 5–8 transpose the axes
+  // Decompose the orientation into three flags (matching exifr's `rotations`
+  // table) so the per-pixel loop is plain arithmetic rather than a switch:
+  //   swap  — 5–8 transpose the axes (a 90°/270° rotation)
+  //   flipX — mirror the source X (2, 3, 7, 8)
+  //   flipY — mirror the source Y (3, 4, 6, 7)
+  const swap = orientation >= 5;
+  const flipX = orientation === 2 || orientation === 3 || orientation === 7 || orientation === 8;
+  const flipY = orientation === 3 || orientation === 4 || orientation === 6 || orientation === 7;
   const outW = swap ? height : width;
   const outH = swap ? width : height;
   const out = new Uint8ClampedArray(outW * outH * 4);
 
+  let d = 0;
   for (let oy = 0; oy < outH; oy++) {
     for (let ox = 0; ox < outW; ox++) {
-      let ix;
-      let iy;
-      switch (orientation) {
-        case 2: ix = width - 1 - ox; iy = oy; break; // flip horizontal
-        case 3: ix = width - 1 - ox; iy = height - 1 - oy; break; // 180°
-        case 4: ix = ox; iy = height - 1 - oy; break; // flip vertical
-        case 5: ix = oy; iy = ox; break; // transpose
-        case 6: ix = oy; iy = height - 1 - ox; break; // rotate 90° CW
-        case 7: ix = width - 1 - oy; iy = height - 1 - ox; break; // transverse
-        case 8: ix = width - 1 - oy; iy = ox; break; // rotate 90° CCW
-        default: ix = ox; iy = oy; break;
-      }
+      const sx = swap ? oy : ox;
+      const sy = swap ? ox : oy;
+      const ix = flipX ? width - 1 - sx : sx;
+      const iy = flipY ? height - 1 - sy : sy;
       const s = (iy * width + ix) * 4;
-      const d = (oy * outW + ox) * 4;
       out[d] = rgba[s];
       out[d + 1] = rgba[s + 1];
       out[d + 2] = rgba[s + 2];
       out[d + 3] = rgba[s + 3];
+      d += 4;
     }
   }
   return { data: out, width: outW, height: outH };

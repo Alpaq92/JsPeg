@@ -1,6 +1,7 @@
 // Walk a JPEG's marker segments to find a specific APPn segment by marker byte
 // and leading signature. Shared by the EXIF-orientation and Adobe-transform
 // readers. Returns the payload span *after* the signature, or null.
+import { JpegMarker, isRestartMarker } from './JpegMarker.js';
 
 /**
  * @param {Uint8Array} data
@@ -23,9 +24,9 @@ export function findAppSegment(data, markerByte, signature) {
     }
     offset += 2;
 
-    if (marker === 0xda || marker === 0xd9) break; // SOS or EOI: no more metadata
-    // standalone markers (RSTn, TEM, padding) carry no length field
-    if ((marker >= 0xd0 && marker <= 0xd9) || marker === 0x01 || marker === 0) continue;
+    if (marker === JpegMarker.StartOfScan || marker === JpegMarker.EndOfImage) break; // no more metadata
+    // standalone markers (RSTn, SOI, TEM, padding) carry no length field
+    if (isRestartMarker(marker) || marker === JpegMarker.StartOfImage || marker === 0x01 || marker === 0) continue;
 
     if (offset + 2 > len) break;
     const segLen = (data[offset] << 8) | data[offset + 1];

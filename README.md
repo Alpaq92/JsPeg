@@ -10,9 +10,6 @@ ported from there (public domain) — so JsPeg stays single-license MIT.
 
 ### ▶ [Live demo](https://alpaq92.github.io/JsPeg/)
 
-Drop in any image to decode, re-encode, or losslessly optimize it — everything
-runs locally in your browser, nothing is uploaded.
-
 ## What it does
 
 - **Decode** baseline, extended-sequential, progressive, and lossless JPEG;
@@ -55,7 +52,8 @@ node tools/serve.mjs     # serve the demo at http://localhost:8080
 ```
 
 Tests cover decode against frozen libjpeg conformance vectors, dependency-free
-encode→decode round-trips, codec unit tests, and optimizer losslessness.
+encode→decode round-trips over a set of sample images, CMYK/YCCK and
+EXIF-orientation handling, codec unit tests, and optimizer losslessness.
 
 ## Notes
 
