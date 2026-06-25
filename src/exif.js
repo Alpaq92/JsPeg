@@ -1,14 +1,22 @@
 // EXIF orientation support.
 //
-// stb_image (which JsPeg's inverse DCT is ported from) does NOT handle EXIF
-// orientation — it deliberately ignores it. So this is an original, spec-based
-// implementation (EXIF/TIFF parsing + a pixel transform), which keeps the
-// project single-license MIT with no added obligations.
+// stb_image (which JsPeg's inverse DCT is ported from) does not handle EXIF
+// orientation, so the reader below is adapted from exifr by Mike Kovařík
+// (https://github.com/MikeKovarik/exifr), used under the MIT License
+// (Copyright (c) 2020 Mike Kovařík, Mutiny.cz) — see LICENSE. Specifically,
+// `readOrientationTag` follows exifr's TIFF parseHeader/parseTags/parseTag flow
+// (byte-order marker, IFD0 walk, the 12-byte entries, and the inline-vs-offset
+// value rule), and `applyOrientation` follows its `rotations` table. Vendored as
+// a minimal slice so JsPeg keeps its zero-dependency, single-license-MIT design.
 import { JpegMarker } from './JpegMarker.js';
 import { findAppSegment } from './markerScan.js';
 
-// "Exif\0\0"
-const EXIF_SIGNATURE = [0x45, 0x78, 0x69, 0x66, 0x00, 0x00];
+const EXIF_SIGNATURE = [0x45, 0x78, 0x69, 0x66, 0x00, 0x00]; // "Exif\0\0"
+const TIFF_LITTLE_ENDIAN = 0x4949; // "II"
+const TIFF_BIG_ENDIAN = 0x4d4d; // "MM"
+const TAG_ORIENTATION = 0x0112;
+// TIFF value type -> byte size (exifr's SIZE_LOOKUP).
+const TIFF_TYPE_SIZE = [0, 1, 1, 2, 4, 8, 1, 1, 2, 4, 8, 4, 8, 4];
 
 /**
  * Read the EXIF orientation (1–8) from a JPEG's APP1 segment.
@@ -19,43 +27,53 @@ export function readExifOrientation(data) {
   try {
     const seg = findAppSegment(data, JpegMarker.App1, EXIF_SIGNATURE);
     if (seg === null) return 1;
-    const value = parseTiffOrientation(data, seg.start, seg.end);
+    const value = readOrientationTag(data, seg.start, seg.end);
     return value >= 1 && value <= 8 ? value : 1;
   } catch {
     return 1; // malformed EXIF -> treat as normal
   }
 }
 
-function parseTiffOrientation(data, tiff, end) {
-  if (tiff + 8 > end) return 0;
-  const little = data[tiff] === 0x49 && data[tiff + 1] === 0x49; // "II"
-  const big = data[tiff] === 0x4d && data[tiff + 1] === 0x4d; // "MM"
-  if (!little && !big) return 0;
+// Port of exifr's TiffCore parseHeader/parseTags/parseTag, narrowed to the
+// single Orientation tag in IFD0. Offsets are relative to the TIFF header start.
+function readOrientationTag(data, tiff, end) {
+  const length = end - tiff;
+  if (length < 8) return 0;
+  const view = new DataView(data.buffer, data.byteOffset + tiff, length);
 
-  const u16 = (o) => (little ? data[o] | (data[o + 1] << 8) : (data[o] << 8) | data[o + 1]);
-  const u32 = (o) => (little
-    ? (data[o] | (data[o + 1] << 8) | (data[o + 2] << 16) | (data[o + 3] << 24))
-    : ((data[o] << 24) | (data[o + 1] << 16) | (data[o + 2] << 8) | data[o + 3])) >>> 0;
+  // parseHeader: the byte-order marker is palindromic, so it reads the same
+  // regardless of endianness; use it to pick `le`.
+  const byteOrder = view.getUint16(0);
+  let le;
+  if (byteOrder === TIFF_LITTLE_ENDIAN) le = true;
+  else if (byteOrder === TIFF_BIG_ENDIAN) le = false;
+  else return 0;
 
-  if (u16(tiff + 2) !== 42) return 0; // TIFF magic
+  const ifd0 = view.getUint32(4, le); // IFD0 offset (bytes 4..7)
+  if (ifd0 + 2 > length) return 0;
 
-  const ifd0 = tiff + u32(tiff + 4);
-  if (ifd0 + 2 > end) return 0;
-  const count = u16(ifd0);
+  // parseTags: walk IFD0's 12-byte entries.
+  const count = view.getUint16(ifd0, le);
   for (let i = 0; i < count; i++) {
     const entry = ifd0 + 2 + i * 12;
-    if (entry + 12 > end) break;
-    if (u16(entry) === 0x0112) {
-      // SHORT value lives in the first 2 bytes of the 4-byte value field.
-      return u16(entry + 8);
-    }
+    if (entry + 12 > length) break;
+    if (view.getUint16(entry, le) !== TAG_ORIENTATION) continue;
+
+    // parseTag: the value is inline when it fits in 4 bytes, else at an offset.
+    const type = view.getUint16(entry + 2, le);
+    const valueCount = view.getUint32(entry + 4, le);
+    const totalSize = (TIFF_TYPE_SIZE[type] || 0) * valueCount;
+    const valueOffset = totalSize <= 4 ? entry + 8 : view.getUint32(entry + 8, le);
+    if (valueOffset + 2 > length) return 0;
+    return view.getUint16(valueOffset, le); // Orientation is a SHORT
   }
   return 0;
 }
 
 /**
  * Apply an EXIF orientation to an interleaved RGBA buffer, returning a new
- * buffer with the corrected pixels (and possibly swapped dimensions).
+ * buffer with the corrected pixels (and possibly swapped dimensions). The
+ * per-orientation transforms correspond to exifr's `rotations` table.
  * @param {Uint8Array|Uint8ClampedArray} rgba
  * @param {number} width
  * @param {number} height

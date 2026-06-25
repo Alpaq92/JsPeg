@@ -72,4 +72,6 @@ orientation is read from the APP1 segment and applied by `decode()` (pass
 
 MIT — see [LICENSE](LICENSE). Ported from
 [yigolden/JpegLibrary](https://github.com/yigolden/JpegLibrary); the inverse DCT
-is from [stb_image](https://github.com/nothings/stb) (public domain).
+is from [stb_image](https://github.com/nothings/stb) (public domain) and the EXIF
+orientation reader is adapted from [exifr](https://github.com/MikeKovarik/exifr)
+(MIT).
