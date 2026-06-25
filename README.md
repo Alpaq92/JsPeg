@@ -58,12 +58,12 @@ encode→decode round-trips, codec unit tests, and optimizer losslessness.
 
 ## Notes
 
-The inverse DCT is ported from [stb_image](https://github.com/nothings/stb)
-(public domain), so the whole project is single-license MIT; it tracks libjpeg's
-accurate IDCT closely. The forward DCT is an original exact transform. Subsampled
-chroma is upsampled by replication, like the original. CMYK/YCCK 4-component,
-12-bit precision, arithmetic coding (SOF9/10), and EXIF orientation are out of
-scope.
+The inverse DCT is **[stb_image](https://github.com/nothings/stb) DNA** — ported
+from there (public domain) — so the whole project is single-license MIT; it
+tracks libjpeg's accurate IDCT closely. The forward DCT is an original exact
+transform. Subsampled chroma is upsampled by replication, like the original.
+CMYK/YCCK 4-component, 12-bit precision, arithmetic coding (SOF9/10), and EXIF
+orientation are out of scope.
 
 ## License
 
