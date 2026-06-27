@@ -108,5 +108,16 @@
     "meanTol": 5.5,
     "maxTol": 125,
     "desc": "quality=80, subsampling=2, progressive=True"
+  },
+  {
+    "name": "arith_seq",
+    "file": "arith_seq.jpg",
+    "ref": "arith_seq.ref",
+    "width": 227,
+    "height": 149,
+    "meanTol": 2,
+    "maxTol": 36,
+    "desc": "SOF9 arithmetic-coded",
+    "credit": "libjpeg-turbo testimages/testimgari.jpg (IJG/BSD licenses)"
   }
 ]

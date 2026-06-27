@@ -3,13 +3,11 @@
 // dequantize + IDCT + level-shift + flush happens in dispose().
 import { JpegBitReader } from '../JpegBitReader.js';
 import { isRestartMarker, JpegMarker } from '../JpegMarker.js';
-import { transformIDCT } from '../dct.js';
 import { JpegBlockAllocator } from '../JpegBlockAllocator.js';
 import {
   JpegHuffmanDecodingComponent,
   initDecodeComponents,
-  dequantizeBlockAndUnZigZag,
-  shiftDataLevel,
+  finalizeProgressiveBlocks,
   decodeHuffmanCode,
   receiveAndExtend,
   quantIsEmpty,
@@ -281,29 +279,7 @@ export class JpegHuffmanProgressiveScanDecoder {
   }
 
   dispose() {
-    const allocator = this._allocator;
-    const buffer = allocator.buffer;
-    const frameHeader = this._frameHeader;
-    const levelShift = this._levelShift;
-
-    const blockF = new Float32Array(64);
-    const outputF = new Float32Array(64);
-
-    // Final dequantize + IDCT + level shift over every stored block, iterating
-    // the frame components directly so all components are processed correctly.
-    for (let ci = 0; ci < frameHeader.numberOfComponents; ci++) {
-      const quant = this._decoder.getQuantizationTable(frameHeader.components[ci].quantizationTableSelector);
-      const info = allocator.componentInfo(ci);
-      for (let by = 0; by < info.vBlocks; by++) {
-        for (let bx = 0; bx < info.hBlocks; bx++) {
-          const offset = (info.blockOffset + by * info.hBlocks + bx) * 64;
-          dequantizeBlockAndUnZigZag(quant, buffer, offset, blockF);
-          transformIDCT(blockF, outputF);
-          shiftDataLevel(outputF, buffer, offset, levelShift);
-        }
-      }
-    }
-
-    allocator.flush(this._outputWriter);
+    // Final dequantize + IDCT + level shift over every stored block, then flush.
+    finalizeProgressiveBlocks(this._decoder, this._frameHeader, this._allocator, this._levelShift, this._outputWriter);
   }
 }

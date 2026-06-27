@@ -12,9 +12,9 @@ ported from there (public domain) — so JsPeg stays single-license MIT.
 
 ## What it does
 
-- **Decode** baseline, extended-sequential, progressive, and lossless JPEG;
-  4:4:4 / 4:2:2 / 4:2:0 subsampling; grayscale / YCbCr / RGB / CMYK; applies EXIF
-  orientation.
+- **Decode** baseline, extended-sequential, progressive, lossless, and
+  **arithmetic-coded** (SOF9/10) JPEG; 4:4:4 / 4:2:2 / 4:2:0 subsampling;
+  grayscale / YCbCr / RGB / CMYK; applies EXIF orientation.
 - **Encode** baseline JPEG with standard or optimized Huffman tables.
 - **Optimize** an existing JPEG — re-codes the Huffman tables losslessly
   (identical pixels, smaller file).
@@ -51,9 +51,11 @@ npm test                 # pure-JS test suite (node --test), no external tooling
 node tools/serve.mjs     # serve the demo at http://localhost:8080
 ```
 
-Tests cover decode against frozen libjpeg conformance vectors, dependency-free
-encode→decode round-trips over a set of sample images, CMYK/YCCK and
-EXIF-orientation handling, codec unit tests, and optimizer losslessness.
+Tests cover decode against frozen libjpeg conformance vectors (including an
+arithmetic-coded SOF9 vector), dependency-free encode→decode round-trips over a
+set of sample images, CMYK/YCCK and EXIF-orientation handling, codec unit tests,
+and optimizer losslessness (plus its idempotence and clear errors on
+progressive/arithmetic input).
 
 ## Notes
 
@@ -63,8 +65,10 @@ tracks libjpeg's accurate IDCT closely. The forward DCT is an original exact
 transform. Subsampled chroma is upsampled by replication, like the original.
 CMYK and YCCK (Adobe APP14) 4-component images decode to RGB, and EXIF
 orientation is read from the APP1 segment and applied by `decode()` (pass
-`applyOrientation: false` to opt out). 12-bit precision and arithmetic coding
-(SOF9/10) are out of scope.
+`applyOrientation: false` to opt out). **Arithmetic coding** is decoded by a
+ported QM-coder: SOF9 (sequential) is validated against a conformance vector and
+SOF10 (progressive) shares the same core. 12-bit precision and the rarer
+differential / hierarchical frame types (SOF5/6/7/11/13–15) remain out of scope.
 
 ## License
 

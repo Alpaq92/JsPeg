@@ -2,6 +2,7 @@
 // (the non-virtual helpers) and JpegHuffmanDecodingComponent.cs.
 import { bufferIndexToBlock } from '../JpegZigZag.js';
 import { roundToInt32 } from '../JpegMathHelper.js';
+import { transformIDCT } from '../dct.js';
 
 export class JpegHuffmanDecodingComponent {
   constructor() {
@@ -50,6 +51,30 @@ export function shiftDataLevel(source, destination, destinationOffset, levelShif
   for (let i = 0; i < 64; i++) {
     destination[destinationOffset + i] = roundToInt32(source[i]) + levelShift;
   }
+}
+
+/**
+ * Final pass for progressive scans (shared by the Huffman and arithmetic
+ * progressive decoders): dequantize, inverse-DCT and level-shift every stored
+ * block in place, then flush to the output writer.
+ */
+export function finalizeProgressiveBlocks(decoder, frameHeader, allocator, levelShift, outputWriter) {
+  const buffer = allocator.buffer;
+  const blockF = new Float32Array(64);
+  const outputF = new Float32Array(64);
+  for (let ci = 0; ci < frameHeader.numberOfComponents; ci++) {
+    const quant = decoder.getQuantizationTable(frameHeader.components[ci].quantizationTableSelector);
+    const info = allocator.componentInfo(ci);
+    for (let by = 0; by < info.vBlocks; by++) {
+      for (let bx = 0; bx < info.hBlocks; bx++) {
+        const offset = (info.blockOffset + by * info.hBlocks + bx) * 64;
+        dequantizeBlockAndUnZigZag(quant, buffer, offset, blockF);
+        transformIDCT(blockF, outputF);
+        shiftDataLevel(outputF, buffer, offset, levelShift);
+      }
+    }
+  }
+  allocator.flush(outputWriter);
 }
 
 /**

@@ -36,8 +36,10 @@ test('optimize shrinks standard-table output and is lossless', () => {
   assert.ok(pixelsEqual(decode(jpg).data, decode(opt).data), 'decoded pixels are identical');
 });
 
-// Baseline fixtures only (the optimizer does not handle progressive JPEGs).
-for (const fx of manifest.filter((f) => !f.name.includes('prog'))) {
+// Baseline Huffman fixtures only (the optimizer handles neither progressive nor
+// arithmetic scans).
+const baseline = manifest.filter((f) => !f.name.includes('prog') && !f.name.includes('arith'));
+for (const fx of baseline) {
   test(`optimize ${fx.name} is lossless and not larger`, () => {
     const src = readFileSync(new URL(`./fixtures/${fx.file}`, import.meta.url));
     const opt = optimize(src);
@@ -46,7 +48,21 @@ for (const fx of manifest.filter((f) => !f.name.includes('prog'))) {
   });
 }
 
+// Re-optimizing an already-optimized stream must not grow it or change pixels.
+test('optimize is idempotent (re-optimizing does not grow or alter pixels)', () => {
+  const src = readFileSync(new URL(`./fixtures/${baseline[0].file}`, import.meta.url));
+  const once = optimize(src);
+  const twice = optimize(once);
+  assert.ok(twice.length <= once.length, `re-optimized (${twice.length}) <= optimized (${once.length})`);
+  assert.ok(pixelsEqual(decode(once).data, decode(twice).data), 'decoded pixels are identical');
+});
+
 test('optimize throws a clear error on progressive input', () => {
   const prog = readFileSync(new URL('./fixtures/rgb_prog_444_q88.jpg', import.meta.url));
   assert.throws(() => optimize(prog), /not supported/i);
+});
+
+test('optimize throws a clear error on arithmetic input', () => {
+  const arith = readFileSync(new URL('./fixtures/arith_seq.jpg', import.meta.url));
+  assert.throws(() => optimize(arith), /not supported/i);
 });

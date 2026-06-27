@@ -17,6 +17,10 @@ The fixtures cover:
 - grayscale baseline (q50/q90) and progressive (q88), plus an odd-sized image
 - RGB 4:4:4 baseline (q75/q92) and progressive (q88), plus an odd-sized image
 - RGB 4:2:0 and 4:2:2 baseline, and 4:2:0 progressive
+- `arith_seq.jpg` — SOF9 **arithmetic-coded** (no available encoder here can
+  produce arithmetic coding). This is libjpeg-turbo's canonical
+  `testimages/testimgari.jpg`, redistributed under its permissive IJG/BSD
+  licenses; its `.ref` was produced by the same libjpeg decoder via Pillow.
 
 Because these are frozen vectors, they should be treated as read-only. The
 encoder is validated separately and dependency-free by the in-memory

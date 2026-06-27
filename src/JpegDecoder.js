@@ -5,6 +5,7 @@ import { JpegFrameHeader } from './JpegFrameHeader.js';
 import { JpegScanHeader } from './JpegScanHeader.js';
 import { JpegQuantizationTable } from './JpegQuantizationTable.js';
 import { JpegHuffmanDecodingTable } from './JpegHuffmanDecodingTable.js';
+import { JpegArithmeticDecodingTable } from './JpegArithmeticDecodingTable.js';
 import { JpegStandardQuantizationTable } from './JpegStandardQuantizationTable.js';
 import { clamp } from './JpegMathHelper.js';
 import { createScanDecoder } from './ScanDecoder/JpegScanDecoder.js';
@@ -25,6 +26,8 @@ export class JpegDecoder {
     this._quantizationTables = null;
     /** @type {JpegHuffmanDecodingTable[]|null} */
     this._huffmanTables = null;
+    /** @type {JpegArithmeticDecodingTable[]|null} */
+    this._arithmeticTables = null;
 
     /** Start-of-frame marker of the current image. */
     this.startOfFrame = 0;
@@ -175,7 +178,7 @@ export class JpegDecoder {
         this._processDefineHuffmanTable(reader);
         break;
       case JpegMarker.DefineArithmeticCodingConditioning:
-        this._processOtherMarker(reader); // arithmetic conditioning skipped
+        this._processDefineArithmeticCodingConditioning(reader);
         break;
       case JpegMarker.DefineQuantizationTable:
         this._processDefineQuantizationTable(reader, true);
@@ -262,6 +265,20 @@ export class JpegDecoder {
     }
   }
 
+  _processDefineArithmeticCodingConditioning(reader) {
+    const length = reader.tryReadLength();
+    if (length < 0) throwInvalidDataAt(reader.consumedByteCount, 'Unexpected end of input data when reading segment length.');
+    const buffer = reader.tryReadBytes(length);
+    if (buffer === null) throwInvalidDataAt(reader.consumedByteCount, 'Unexpected end of input data when reading segment content.');
+    let offset = 0;
+    while (offset < buffer.length) {
+      const r = JpegArithmeticDecodingTable.parse(buffer, offset);
+      if (r === null) throwInvalidDataAt(reader.consumedByteCount - length + offset, 'Failed to parse arithmetic coding conditioning.');
+      offset += r.bytesConsumed;
+      this.setArithmeticTable(r.value);
+    }
+  }
+
   _processDefineQuantizationTable(reader, loadQuantizationTables) {
     const length = reader.tryReadLength();
     if (length < 0) throwInvalidDataAt(reader.consumedByteCount, 'Unexpected end of input data when reading segment length.');
@@ -324,8 +341,32 @@ export class JpegDecoder {
     return null;
   }
 
+  setArithmeticTable(table) {
+    if (table == null) throw new Error('table is required.');
+    let list = this._arithmeticTables;
+    if (list === null) list = this._arithmeticTables = [];
+    for (let i = 0; i < list.length; i++) {
+      if (list[i].tableClass === table.tableClass && list[i].identifier === table.identifier) {
+        list[i] = table;
+        return;
+      }
+    }
+    list.push(table);
+  }
+
+  getArithmeticTable(isDcTable, identifier) {
+    const list = this._arithmeticTables;
+    if (list === null) return null;
+    const tableClass = isDcTable ? 0 : 1;
+    for (const item of list) {
+      if (item.tableClass === tableClass && item.identifier === identifier) return item;
+    }
+    return null;
+  }
+
   clearHuffmanTable() { if (this._huffmanTables) this._huffmanTables.length = 0; }
   clearQuantizationTable() { if (this._quantizationTables) this._quantizationTables.length = 0; }
+  clearArithmeticTable() { if (this._arithmeticTables) this._arithmeticTables.length = 0; }
 
   // ---- Frame metadata accessors ------------------------------------------
 
@@ -415,6 +456,7 @@ export class JpegDecoder {
   resetTables() {
     if (this._huffmanTables) this._huffmanTables.length = 0;
     if (this._quantizationTables) this._quantizationTables.length = 0;
+    if (this._arithmeticTables) this._arithmeticTables.length = 0;
   }
   resetOutputWriter() { this._outputWriter = null; }
 }

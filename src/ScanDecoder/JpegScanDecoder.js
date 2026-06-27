@@ -3,6 +3,8 @@ import { JpegMarker } from '../JpegMarker.js';
 import { JpegHuffmanBaselineScanDecoder } from './JpegHuffmanBaselineScanDecoder.js';
 import { JpegHuffmanProgressiveScanDecoder } from './JpegHuffmanProgressiveScanDecoder.js';
 import { JpegHuffmanLosslessScanDecoder } from './JpegHuffmanLosslessScanDecoder.js';
+import { JpegArithmeticSequentialScanDecoder } from './JpegArithmeticSequentialScanDecoder.js';
+import { JpegArithmeticProgressiveScanDecoder } from './JpegArithmeticProgressiveScanDecoder.js';
 
 /**
  * Create a scan decoder for the given Start-of-Frame marker.
@@ -18,9 +20,9 @@ export function createScanDecoder(sofMarker, decoder, frameHeader) {
     case JpegMarker.StartOfFrame3:
       return new JpegHuffmanLosslessScanDecoder(decoder, frameHeader);
     case JpegMarker.StartOfFrame9:
+      return new JpegArithmeticSequentialScanDecoder(decoder, frameHeader);
     case JpegMarker.StartOfFrame10:
-      // Arithmetic coding — implemented in a later module.
-      return null;
+      return new JpegArithmeticProgressiveScanDecoder(decoder, frameHeader);
     default:
       return null;
   }
