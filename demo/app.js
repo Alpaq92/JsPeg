@@ -221,7 +221,7 @@ function doOptimize() {
         qClass = identical ? 'good' : 'error';
       } else {
         const p = psnr(ref, back);
-        qualityText = `lossy · PSNR ${isFinite(p) ? p.toFixed(1) + ' dB' : '∞'}`;
+        qualityText = `lossy ⚠ PSNR ${isFinite(p) ? p.toFixed(1) + ' dB' : '∞'}`;
         qClass = 'lossy';
       }
       if (!m.native) qualityText += ' · ⚠ not browser-native';
