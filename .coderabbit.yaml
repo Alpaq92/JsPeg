@@ -1,0 +1,30 @@
+# yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
+# CodeRabbit configuration — https://docs.coderabbit.ai/getting-started/configure-coderabbit
+language: en-US
+reviews:
+  profile: chill
+  request_changes_workflow: false
+  high_level_summary: true
+  poem: false
+  review_status: true
+  auto_review:
+    enabled: true
+    drafts: false
+  path_instructions:
+    - path: "**/*"
+      instructions: >-
+        JsPeg is single-license MIT with ZERO runtime and dev dependencies, and
+        must stay that way. Treat each of the following as a blocking licensing
+        concern and call it out explicitly in the review:
+        (1) Code copied or ported from a non-MIT / non-public-domain source — for
+        example libjpeg, libjpeg-turbo, mozjpeg, the IJG codebase, or any
+        GPL / LGPL / Apache-2.0 / BSD-licensed implementation. Naming such a
+        project in a comment as a behavioural reference is fine; copying or
+        transcribing its code is not.
+        (2) A new runtime or dev dependency added to package.json, or a vendored
+        third-party source file.
+        (3) A new license header, NOTICE, or attribution that would introduce a
+        second license alongside MIT.
+        Acceptable origins are MIT, public-domain, or clean-room-from-specification
+        work (e.g. ITU-T T.81, ICC.org); clean-room code that merely matches
+        another codec's numerical output is fine.
