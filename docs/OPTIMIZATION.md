@@ -69,11 +69,11 @@ What JsPeg does with each Start-of-Frame type, end to end (✅ supported · ◐ 
 | **SOF1** | Extended sequential DCT (Huffman) | ✅ | ✅ (as baseline) | 8-bit; handled like baseline |
 | **SOF2** | Progressive DCT (Huffman) | ✅ | ✅ as **output** of `{ progressive }` | multi-scan, incremental |
 | **SOF3** | Lossless (sequential) | ✅ verified | ✅ `encode({ lossless })` | predictors 1–7, **2–16-bit** (incl. 12-bit); cross-checked against an independent SOF3 decoder |
-| **SOF5–7** | Differential sequential / progressive / lossless | ✖ | ✖ | rare; upstream lacks them too |
+| **SOF5–7** | Differential sequential / progressive / lossless (Huffman) | ✖ | ✖ | **hierarchical mode** only (T.81 Annex J); even libjpeg never implemented it, so there is **no reference decoder to verify against** |
 | **SOF9** | Extended sequential DCT, **arithmetic** | ✅ verified | ✅ as **output** of `{ arithmetic }` | clean-room QM-coder |
 | **SOF10** | Progressive DCT, **arithmetic** | ✅ verified | ✅ as **output** of `{ arithmetic, progressive }` | QM-coder + successive approximation; our output round-trips through libjpeg-turbo |
-| **SOF11** | Lossless, arithmetic | ✖ | ✖ | |
-| **SOF13–15** | Differential …, arithmetic | ✖ | ✖ | |
+| **SOF11** | Lossless, arithmetic | ✖ | ✖ | non-differential; niche, low priority |
+| **SOF13–15** | Differential …, arithmetic | ✖ | ✖ | arithmetic flavour of SOF5–7 — same hierarchical mode, same absence of any reference implementation |
 
 (SOF4 = DHT, SOF8 = reserved, SOF12 = reserved — not frame types.) The optimizer
 **input** must be SOF0/SOF1 (baseline Huffman); other inputs are rejected with a
