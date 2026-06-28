@@ -88,7 +88,7 @@ same `processScan(reader, scanHeader)` / `dispose()` lifecycle:
 | Stream parsing | `JpegReader`, `JpegBitReader`, `JpegMarker`, `markerScan` |
 | Headers & tables | `JpegFrameHeader`, `JpegScanHeader`, `JpegQuantizationTable`, `JpegStandardQuantizationTable`, `JpegHuffmanDecodingTable`, `JpegArithmeticDecodingTable`, `JpegArithmeticStatistics`, `JpegElementPrecision`, `JpegZigZag` |
 | Math / transforms | `JpegMathHelper`, `dct` (stb IDCT + exact FDCT), `colorConverter` |
-| Decode | `JpegDecoder` + `ScanDecoder/*` |
+| Decode | `JpegDecoder` + `ScanDecoder/*`; `icc` / `exif` / `colorConverter` for metadata + colour |
 | Block buffers / output | `JpegBlockAllocator`, `JpegBlockOutputWriter`, `output/JpegBufferOutputWriter`, `JpegPartialScanlineAllocator` |
 | Encode | `JpegEncoder`, `JpegLosslessEncoder`, `JpegWriter`, `JpegHuffmanEncoding*`, `JpegStandardHuffmanEncodingTable`, `JpegBlockInputReader`, `input/JpegBufferInputReader` |
 | Optimize | `JpegOptimizer`, `JpegTrellis`, `ScanEncoder/*` (progressive + arithmetic encoders) |

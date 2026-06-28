@@ -22,8 +22,9 @@ with the exact size and percentage each one saves. Everything runs on your devic
 ## What it does
 
 - **Decode** baseline, extended-sequential, progressive, lossless, and
-  **arithmetic-coded** (SOF9/10) JPEG; 4:4:4 / 4:2:2 / 4:2:0 subsampling;
-  grayscale / YCbCr / RGB / CMYK; applies EXIF orientation.
+  **arithmetic-coded** (SOF9/10) JPEG; **8 or 12-bit**; 4:4:4 / 4:2:2 / 4:2:0
+  subsampling; grayscale / YCbCr / RGB / CMYK; reads EXIF orientation and embedded
+  **ICC profiles**.
 - **Encode** baseline JPEG (standard or optimized Huffman tables), or truly **lossless**
   (SOF3 — 7 spatial predictors, 8–16-bit precision, exact bit-for-bit round-trip).
 - **Optimize** an existing JPEG — losslessly re-code its Huffman tables, or
@@ -121,7 +122,10 @@ vectors, and `optimize()` can also *encode* arithmetic — SOF9, and SOF10 with
 `progressive` (our output round-trips through libjpeg-turbo). **Lossless (SOF3)**
 is supported both ways — `encode({ lossless: true })` (predictors 1–7, **2–16-bit
 precision**) and decode, cross-checked against an independent lossless decoder
-(including a 12-bit round-trip). 12-bit *DCT* decode is not yet supported. The
+(including a 12-bit round-trip). **12-bit DCT** (extended-sequential / progressive)
+decodes too — cross-checked against libjpeg-turbo. Embedded **ICC colour profiles**
+are read on decode (`decodeComponents().icc`) and can be embedded on encode
+(`encode({ icc })`). The
 differential / hierarchical frame types (SOF5–7 / SOF13–15) are out of scope:
 they exist only inside hierarchical mode (T.81 Annex J), which even libjpeg never
 implemented — so there is no reference decoder to verify an implementation against.

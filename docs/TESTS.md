@@ -7,14 +7,14 @@ network. Committed fixtures let the tests run anywhere Node does.
 npm test
 ```
 
-82 tests across six files.
+89 tests across six files.
 
 ## Test files (`test/`)
 
 | File | Covers |
 |---|---|
-| `decode.test.mjs` | Decode vs. frozen **libjpeg conformance vectors** — compares RGBA against a reference decode within per-fixture tolerances. Includes the SOF9 and SOF10 **arithmetic** vectors. |
-| `roundtrip.test.mjs` | Dependency-free **encode → decode** round-trips over procedural sample images (`demo/samples.js`), plus **exact lossless (SOF3)** round-trips for all 7 predictors and **12-bit** precision (which also exercise the otherwise-unfixtured lossless decoder). |
+| `decode.test.mjs` | Decode vs. frozen **libjpeg conformance vectors** — compares RGBA against a reference decode within per-fixture tolerances. Includes the SOF9 / SOF10 **arithmetic** and a **12-bit** (SOF1) vector. |
+| `roundtrip.test.mjs` | Dependency-free **encode → decode** round-trips over procedural sample images (`demo/samples.js`), plus **exact lossless (SOF3)** round-trips for all 7 predictors and **12-bit** precision (which also exercise the otherwise-unfixtured lossless decoder), plus **ICC profile** embed/read round-trips. |
 | `optimize.test.mjs` | Optimizer **losslessness** across Huffman / progressive (successive approximation) / arithmetic (SOF9) / arithmetic-progressive (SOF10) transcodes, the **lossy trellis** mode, **idempotence**, and clear errors on non-baseline input. |
 | `cmyk.test.mjs` | CMYK / YCCK (Adobe APP14) 4-component decode to RGB. |
 | `orientation.test.mjs` | All 8 **EXIF orientations** vs. the reference transform. |

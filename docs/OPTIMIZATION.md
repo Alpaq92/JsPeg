@@ -66,7 +66,7 @@ What JsPeg does with each Start-of-Frame type, end to end (✅ supported · ◐ 
 | Marker | Frame type | Decode | Encode / `optimize()` | Notes |
 |---|---|---|---|---|
 | **SOF0** | Baseline DCT (Huffman) | ✅ | ✅ all modes | the common case; the only accepted optimizer **input** |
-| **SOF1** | Extended sequential DCT (Huffman) | ✅ | ✅ (as baseline) | 8-bit; handled like baseline |
+| **SOF1** | Extended sequential DCT (Huffman) | ✅ | ✅ (as baseline) | **8/12-bit**; handled like baseline (12-bit cross-checked vs libjpeg-turbo) |
 | **SOF2** | Progressive DCT (Huffman) | ✅ | ✅ as **output** of `{ progressive }` | multi-scan, incremental |
 | **SOF3** | Lossless (sequential) | ✅ verified | ✅ `encode({ lossless })` | predictors 1–7, **2–16-bit** (incl. 12-bit); cross-checked against an independent SOF3 decoder |
 | **SOF5–7** | Differential sequential / progressive / lossless (Huffman) | ✖ | ✖ | **hierarchical mode** only (T.81 Annex J) — libjpeg's own docs list it as unsupported, so there's no reference decoder, *and* it needs the whole multi-frame framework: **strictly worse than SOF11** (bigger build, equally unverifiable) |
