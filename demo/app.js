@@ -61,6 +61,7 @@ async function handleFile(file) {
       currentJpegBytes = null;
       optimizePanel.hidden = true;
       decodePanel.hidden = true;
+      clearOptimize();
       await loadAsSource(file);
       setStatus(`Loaded ${file.name} (${currentRGBA.width}×${currentRGBA.height}). Encode it as JPEG below.`);
     }
@@ -93,6 +94,7 @@ async function loadSample(sample) {
 
 async function showJpeg(bytes) {
   currentJpegBytes = bytes;
+  clearOptimize(); // a new image invalidates the previous comparison
 
   const t0 = performance.now();
   const meta = decodeComponents(bytes);
@@ -185,6 +187,13 @@ const DOWNLOAD_SVG = '<svg viewBox="0 0 24 24" width="18" height="18" aria-hidde
 const INFO_SVG = '<svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><line x1="12" y1="11" x2="12" y2="16"/><line x1="12" y1="8" x2="12" y2="8"/></svg>';
 
 let optUrls = []; // blob URLs from the last comparison, revoked before the next
+
+// Drop the comparison table + its blob URLs (e.g. when a new image is loaded).
+function clearOptimize() {
+  optUrls.forEach(URL.revokeObjectURL);
+  optUrls = [];
+  $('optimizeResults').innerHTML = '';
+}
 
 function psnr(a, b) {
   let sum = 0;
@@ -279,8 +288,11 @@ function downloadCell(r) {
 function infoGlyph(tip) {
   const span = document.createElement('span');
   span.className = 'info-glyph';
-  span.title = tip;
   span.innerHTML = INFO_SVG;
+  const t = document.createElement('span');
+  t.className = 'tip';
+  t.textContent = tip;
+  span.appendChild(t);
   return span;
 }
 
