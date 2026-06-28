@@ -81,10 +81,14 @@ export class JpegHuffmanLosslessScanDecoder {
               if (rowMcu === 0 || (restartInterval > 0 && mcusBeforeRestart === restartInterval)) {
                 if (colMcu === 0 && x === 0) {
                   diffValue += initialPrediction;
+                } else if (y === 0) {
+                  // First line: the horizontal predictor Ra is forced regardless of
+                  // the selected predictor (T.81 H.1.2.1).
+                  diffValue += scanline[px - 1];
                 } else {
                   const ra = scanline[px - 1];
-                  const rb = y === 0 ? initialPrediction : lastScanline[px];
-                  const rc = y === 0 ? initialPrediction : lastScanline[px - 1];
+                  const rb = lastScanline[px];
+                  const rc = lastScanline[px - 1];
                   diffValue += predict(predictor, ra, rb, rc);
                 }
               } else if (colMcu === 0) {
