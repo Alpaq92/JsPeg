@@ -226,3 +226,24 @@ test('no ICC profile -> decodeComponents().icc is null', () => {
   const src = new Uint8Array(w * h * 4).fill(128);
   assert.equal(decodeComponents(encode({ width: w, height: h, data: src, channels: 4 }, { quality: 80 })).icc, null);
 });
+
+// 12-bit DCT encode: { precision: 12 } emits an extended-sequential SOF1 frame
+// (its own optimal Huffman tables, since there are no standard 12-bit tables).
+// libjpeg-turbo decodes this output identically (cross-checked out-of-band).
+test('12-bit DCT encode emits SOF1 and round-trips near-losslessly', () => {
+  const w = 64;
+  const h = 48;
+  const gray = new Uint16Array(w * h); // 12-bit samples (0..4095)
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      gray[y * w + x] = Math.max(0, Math.min(4095, Math.round(2048 + 1800 * Math.sin(x / 9) + 1000 * Math.cos(y / 7))));
+    }
+  }
+  const jpg = encode({ width: w, height: h, components: [gray], precision: 12 }, { quality: 92 });
+  const c = decodeComponents(jpg);
+  assert.equal(c.startOfFrame, 0xc1, 'extended-sequential SOF1 frame');
+  assert.equal(c.precision, 12, 'decoded at 12-bit precision');
+  let sum = 0;
+  for (let i = 0; i < w * h; i++) sum += Math.abs(gray[i] - c.components[0][i]);
+  assert.ok(sum / (w * h) < 4, `12-bit DCT round-trip mean ${(sum / (w * h)).toFixed(1)} of 4095 at q92`);
+});

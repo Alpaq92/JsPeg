@@ -11,7 +11,7 @@ the EXIF-orientation reader adapted from [exifr](https://github.com/MikeKovarik/
 | Function | Does |
 |---|---|
 | `decode(bytes, opts?)` | JPEG → `{ width, height, data }` (RGBA `Uint8ClampedArray`) |
-| `decodeComponents(bytes)` | JPEG → raw component planes (no colour conversion) |
+| `decodeComponents(bytes)` | JPEG → raw component planes + `metadata` (EXIF/XMP/IPTC/ICC), no colour conversion |
 | `encode({ width, height, data }, opts?)` | RGBA → JPEG bytes — baseline, **progressive** / **arithmetic** (`{ progressive }` / `{ arithmetic }`), or lossless SOF3 (`{ lossless }`) |
 | `optimize(bytes, opts?)` | JPEG → smaller JPEG, pixels unchanged (see [OPTIMIZATION.md](OPTIMIZATION.md)) |
 
@@ -93,7 +93,7 @@ same `processScan(reader, scanHeader)` / `dispose()` lifecycle:
 | Stream parsing | `JpegReader`, `JpegBitReader`, `JpegMarker`, `markerScan` |
 | Headers & tables | `JpegFrameHeader`, `JpegScanHeader`, `JpegQuantizationTable`, `JpegStandardQuantizationTable`, `JpegHuffmanDecodingTable`, `JpegArithmeticDecodingTable`, `JpegArithmeticStatistics`, `JpegElementPrecision`, `JpegZigZag` |
 | Math / transforms | `JpegMathHelper`, `dct` (stb IDCT + exact FDCT), `colorConverter`, `upsample` (fancy bilinear chroma) |
-| Decode | `JpegDecoder` + `ScanDecoder/*`; `icc` / `exif` / `colorConverter` for metadata + colour |
+| Decode | `JpegDecoder` + `ScanDecoder/*`; `icc` / `exif` / `metadata` (EXIF·XMP·IPTC·thumbnail) / `colorConverter` for metadata + colour |
 | Block buffers / output | `JpegBlockAllocator`, `JpegBlockOutputWriter`, `output/JpegBufferOutputWriter`, `JpegPartialScanlineAllocator` |
 | Encode | `JpegEncoder`, `JpegLosslessEncoder`, `JpegWriter`, `JpegHuffmanEncoding*`, `JpegStandardHuffmanEncodingTable`, `JpegBlockInputReader`, `input/JpegBufferInputReader` |
 | Optimize | `JpegOptimizer`, `JpegTrellis`, `ScanEncoder/*` (progressive + arithmetic encoders) |

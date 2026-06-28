@@ -29,6 +29,8 @@ export class JpegEncoder {
     this._encodeComponents = null;
     /** True to use the package-merge optimal Huffman algorithm. */
     this.mostOptimalCoding = false;
+    /** Sample precision in bits — 8 emits SOF0 (baseline); 9..12 emits SOF1. */
+    this.precision = 8;
   }
 
   setInputReader(inputReader) {
@@ -168,9 +170,9 @@ export class JpegEncoder {
         c.componentIndex, c.horizontalSamplingFactor, c.verticalSamplingFactor, c.quantizationTable.identifier,
       );
     }
-    const frameHeader = new JpegFrameHeader(8, input.height, input.width, components.length, components);
+    const frameHeader = new JpegFrameHeader(this.precision, input.height, input.width, components.length, components);
 
-    writer.writeMarker(JpegMarker.StartOfFrame0);
+    writer.writeMarker(this.precision > 8 ? JpegMarker.StartOfFrame1 : JpegMarker.StartOfFrame0);
     writer.writeLength(frameHeader.bytesRequired);
     const buf = new Uint8Array(frameHeader.bytesRequired);
     frameHeader.write(buf, 0);
@@ -217,7 +219,7 @@ export class JpegEncoder {
 
     const mcusPerLine = Math.trunc((inputReader.width + 8 * maxH - 1) / (8 * maxH));
     const mcusPerColumn = Math.trunc((inputReader.height + 8 * maxV - 1) / (8 * maxV));
-    const levelShift = 128;
+    const levelShift = 1 << (this.precision - 1);
 
     const buffer = allocator.buffer;
     const inputF = new Float32Array(64);
@@ -324,7 +326,7 @@ export class JpegEncoder {
     const mcusPerColumn = Math.trunc((inputReader.height + 8 * maxV - 1) / (8 * maxV));
 
     writer.enterBitMode();
-    const levelShift = 128;
+    const levelShift = 1 << (this.precision - 1);
     const inputBuffer = new Int16Array(64);
     const inputF = new Float32Array(64);
     const outputF = new Float32Array(64);
