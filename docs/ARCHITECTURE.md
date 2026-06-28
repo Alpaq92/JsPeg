@@ -53,6 +53,8 @@ The other `optimize()` modes instead extract the coefficients into a
 - `{ arithmetic }` → **arithmetic** SOF9 via `ScanEncoder/JpegArithmeticScanEncoder`
   (a clean-room QM-coder, the dual of `decodeBinaryDecision`) +
   `JpegArithmeticSequentialScanEncoder`.
+- `{ arithmetic, progressive }` → **arithmetic progressive** SOF10 via
+  `JpegArithmeticProgressiveScanEncoder` (the QM-coder + successive approximation).
 - `{ trellis }` → **lossy** R-D coefficient thresholding (`JpegTrellis.js`), then a
   re-encoded baseline.
 

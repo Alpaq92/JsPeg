@@ -142,6 +142,26 @@ test('optimize --arithmetic throws a clear error on non-baseline input', () => {
   assert.throws(() => optimize(prog, { arithmetic: true }), /not supported/i);
 });
 
+// --- arithmetic progressive transcode (baseline -> SOF10), lossless ----------
+
+/** True if the stream contains a Start-of-Frame-10 (arithmetic progressive) marker. */
+function isArithmeticProgressive(data) {
+  for (let i = 0; i + 1 < data.length; i++) {
+    if (data[i] === 0xff && data[i + 1] === 0xca) return true;
+  }
+  return false;
+}
+
+for (const fx of baseline) {
+  test(`optimize ${fx.name} --arithmetic --progressive is lossless and valid SOF10`, () => {
+    const src = readFileSync(new URL(`./fixtures/${fx.file}`, import.meta.url));
+    const ari = optimize(src, { arithmetic: true, progressive: true });
+    assert.ok(isArithmeticProgressive(ari), 'output is an arithmetic-coded progressive (SOF10) JPEG');
+    assert.ok(ari.length <= src.length, `SOF10 (${ari.length}) <= original (${src.length})`);
+    assert.ok(pixelsEqual(decode(src).data, decode(ari).data), 'decoded pixels are identical');
+  });
+}
+
 // --- trellis quantization (lossy rate-distortion thresholding) ---------------
 
 /** True if the stream contains a Start-of-Frame-0 (baseline) marker. */

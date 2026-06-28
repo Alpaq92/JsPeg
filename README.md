@@ -24,8 +24,8 @@ JsPeg stays **single-license MIT** — see [the Notes](#notes).
   (SOF3 — spatial prediction, 8–16-bit, exact round-trip).
 - **Optimize** an existing JPEG — losslessly re-code its Huffman tables, or
   transcode to **progressive** (successive approximation: renders incrementally
-  *and* smaller) or **arithmetic** (SOF9); or **trellis**-quantize for extra
-  savings (lossy). Lossless modes leave pixels unchanged.
+  *and* smaller) or **arithmetic** (SOF9, or SOF10 with `progressive`); or
+  **trellis**-quantize for extra savings (lossy). Lossless modes leave pixels unchanged.
 
 ## Usage
 
@@ -112,7 +112,8 @@ original. CMYK and YCCK (Adobe APP14) 4-component images decode to RGB, and EXIF
 orientation is read from the APP1 segment and applied by `decode()` (pass
 `applyOrientation: false` to opt out). **Arithmetic coding** is fully supported by
 the clean-room QM-coder: SOF9 + SOF10 decode is validated against conformance
-vectors, and `optimize()` can also *encode* arithmetic (SOF9). **Lossless (SOF3)**
+vectors, and `optimize()` can also *encode* arithmetic — SOF9, and SOF10 with
+`progressive` (our output round-trips through libjpeg-turbo). **Lossless (SOF3)**
 is supported both ways — `encode({ lossless: true })` (predictors 1–7, **2–16-bit
 precision**) and decode, cross-checked against an independent lossless decoder
 (including a 12-bit round-trip). 12-bit *DCT* decode is not yet supported; the rarer

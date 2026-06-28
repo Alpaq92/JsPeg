@@ -17,6 +17,7 @@ import {
   DEFAULT_DC_U,
   DEFAULT_AC_KX,
 } from './ScanEncoder/JpegArithmeticSequentialScanEncoder.js';
+import { JpegArithmeticProgressiveScanEncoder } from './ScanEncoder/JpegArithmeticProgressiveScanEncoder.js';
 import { JpegQuantizationTable } from './JpegQuantizationTable.js';
 import { JpegHuffmanDecodingTable } from './JpegHuffmanDecodingTable.js';
 import { JpegHuffmanEncodingTableBuilderCollection } from './JpegHuffmanEncodingTableBuilderCollection.js';
@@ -358,7 +359,7 @@ export class JpegOptimizer {
     const writer = new JpegWriter();
 
     this._writeImagePreamble(writer, appSegments, strip);
-    this._writeStartOfFrame2(writer, frameHeader);
+    this._writeStartOfFrame(writer, JpegMarker.StartOfFrame2, frameHeader);
 
     for (const scan of buildSimpleProgression(frameHeader.numberOfComponents)) {
       writeProgressiveScan(writer, frameHeader, allocator, scan, this.mostOptimalCoding);
@@ -382,8 +383,10 @@ export class JpegOptimizer {
     this._writeQuantizationTables(writer);
   }
 
-  _writeStartOfFrame2(writer, frameHeader) {
-    writer.writeMarker(JpegMarker.StartOfFrame2);
+  // The frame-header body is identical for every SOF type — only the marker
+  // differs — so one writer serves baseline/progressive/arithmetic alike.
+  _writeStartOfFrame(writer, marker, frameHeader) {
+    writer.writeMarker(marker);
     writer.writeLength(frameHeader.bytesRequired);
     const buf = new Uint8Array(frameHeader.bytesRequired);
     frameHeader.write(buf, 0);
@@ -401,11 +404,7 @@ export class JpegOptimizer {
 
     this._writeImagePreamble(writer, appSegments, strip);
 
-    writer.writeMarker(JpegMarker.StartOfFrame9);
-    writer.writeLength(frameHeader.bytesRequired);
-    const fbuf = new Uint8Array(frameHeader.bytesRequired);
-    frameHeader.write(fbuf, 0);
-    writer.writeBytes(fbuf);
+    this._writeStartOfFrame(writer, JpegMarker.StartOfFrame9, frameHeader);
 
     this._writeArithmeticConditioning(writer, frameHeader.numberOfComponents);
     this._writeArithmeticScanHeader(writer, frameHeader);
@@ -437,6 +436,45 @@ export class JpegOptimizer {
       (fc, i) => new JpegScanComponentSpecificationParameters(fc.identifier, i === 0 ? 0 : 1, i === 0 ? 0 : 1),
     );
     const scanHeader = new JpegScanHeader(components.length, components, 0, 63, 0, 0);
+    writer.writeMarker(JpegMarker.StartOfScan);
+    writer.writeLength(scanHeader.bytesRequired);
+    const buf = new Uint8Array(scanHeader.bytesRequired);
+    scanHeader.write(buf, 0);
+    writer.writeBytes(buf);
+  }
+
+  // ---- Arithmetic progressive transcode (baseline -> SOF10, lossless) -----
+
+  /** Transcode the baseline input to an arithmetic-coded progressive (SOF10) JPEG
+   *  — combines the QM-coder with progressive successive approximation. As with
+   *  SOF9, browsers cannot display arithmetic JPEGs. @returns {Uint8Array} */
+  optimizeArithmeticProgressive(strip = true) {
+    const { frameHeader, allocator, appSegments } = this._extractBaseline(strip);
+    const writer = new JpegWriter();
+
+    this._writeImagePreamble(writer, appSegments, strip);
+
+    this._writeStartOfFrame(writer, JpegMarker.StartOfFrame10, frameHeader);
+
+    this._writeArithmeticConditioning(writer, frameHeader.numberOfComponents);
+
+    const encoder = new JpegArithmeticProgressiveScanEncoder(frameHeader);
+    for (const scan of buildSimpleProgression(frameHeader.numberOfComponents)) {
+      const entropy = encoder.encode(scan, allocator);
+      this._writeArithmeticProgressiveScanHeader(writer, frameHeader, scan);
+      writer.writeBytes(entropy);
+    }
+
+    writer.writeMarker(JpegMarker.EndOfImage);
+    return writer.toUint8Array().slice();
+  }
+
+  _writeArithmeticProgressiveScanHeader(writer, frameHeader, scan) {
+    const isDc = scan.ss === 0;
+    const cls = scan.comp === 0 ? 0 : 1; // luma vs chroma conditioning bank
+    const identifier = frameHeader.components[scan.comp].identifier;
+    const component = new JpegScanComponentSpecificationParameters(identifier, isDc ? cls : 0, isDc ? 0 : cls);
+    const scanHeader = new JpegScanHeader(1, [component], scan.ss, scan.se, scan.ah, scan.al);
     writer.writeMarker(JpegMarker.StartOfScan);
     writer.writeLength(scanHeader.bytesRequired);
     const buf = new Uint8Array(scanHeader.bytesRequired);
@@ -535,11 +573,7 @@ export class JpegOptimizer {
     const writer = new JpegWriter();
     this._writeImagePreamble(writer, appSegments, strip);
 
-    writer.writeMarker(JpegMarker.StartOfFrame0);
-    writer.writeLength(frameHeader.bytesRequired);
-    const fbuf = new Uint8Array(frameHeader.bytesRequired);
-    frameHeader.write(fbuf, 0);
-    writer.writeBytes(fbuf);
+    this._writeStartOfFrame(writer, JpegMarker.StartOfFrame0, frameHeader);
 
     writer.writeMarker(JpegMarker.DefineHuffmanTable);
     writer.writeLength(tables.getTotalBytesRequired());
