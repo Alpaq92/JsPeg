@@ -153,18 +153,17 @@ test('fancy upsampling: centered bilinear (3:1) blend, clamped edges, flat stays
   const native = [10, 20, 30, 40];
   const plane = new Int16Array(W);
   for (let x = 0; x < W; x++) plane[x] = native[x >> 1];
-  fancyUpsample(plane, W, 1, 2, 1);
+  const up = fancyUpsample(plane, W, 1, 2, 1);
 
-  assert.equal(plane[0], 10, 'left edge clamps to the first native sample');
-  assert.equal(plane[W - 1], 40, 'right edge clamps to the last native sample');
+  assert.equal(up[0], 10, 'left edge clamps to the first native sample');
+  assert.equal(up[W - 1], 40, 'right edge clamps to the last native sample');
   const near = (got, want) => assert.ok(Math.abs(got - want) <= 1, `${got} ≈ ${want}`);
-  near(plane[1], 0.75 * 10 + 0.25 * 20); // 3:1 toward native[0]
-  near(plane[2], 0.25 * 10 + 0.75 * 20); // 3:1 toward native[1]
-  near(plane[3], 0.75 * 20 + 0.25 * 30);
-  for (let x = 1; x < W; x++) assert.ok(plane[x] >= plane[x - 1], 'monotonic for monotonic input');
+  near(up[1], 0.75 * 10 + 0.25 * 20); // 3:1 toward native[0]
+  near(up[2], 0.25 * 10 + 0.75 * 20); // 3:1 toward native[1]
+  near(up[3], 0.75 * 20 + 0.25 * 30);
+  for (let x = 1; x < W; x++) assert.ok(up[x] >= up[x - 1], 'monotonic for monotonic input');
 
   // A flat plane must stay flat at 4:2:0 — no overshoot or ringing.
   const flat = new Int16Array(8 * 8).fill(128);
-  fancyUpsample(flat, 8, 8, 2, 2);
-  assert.ok(flat.every((v) => v === 128), 'flat field is preserved exactly');
+  assert.ok(fancyUpsample(flat, 8, 8, 2, 2).every((v) => v === 128), 'flat field is preserved exactly');
 });

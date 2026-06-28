@@ -169,17 +169,8 @@ test('lossless 12-bit grayscale round-trips exactly', () => {
 // --- native progressive / arithmetic encode from pixels ----------------------
 // encode({ progressive }) / { arithmetic } emit the requested frame type
 // straight from pixels (internally: a baseline encode + a lossless transcode),
-// so the decoded pixels are identical to a plain baseline encode.
-function frameType(bytes) {
-  for (let i = 2; i + 1 < bytes.length; i++) {
-    if (bytes[i] === 0xff) {
-      const m = bytes[i + 1];
-      if (m >= 0xc0 && m <= 0xcf && m !== 0xc4 && m !== 0xc8) return m; // an SOFn
-    }
-  }
-  return 0;
-}
-
+// so the decoded pixels are identical to a plain baseline encode. decode() and
+// decodeComponents() already return the SOFn marker byte as `startOfFrame`.
 test('native progressive / arithmetic encode from pixels (right frame type, pixel-identical)', () => {
   const opts = { quality: 85, subsampling: '4:2:0' };
   const baseline = decode(encode({ width: W, height: H, data: source, channels: 4 }, opts)).data;
@@ -189,10 +180,10 @@ test('native progressive / arithmetic encode from pixels (right frame type, pixe
     [{ arithmetic: true, progressive: true }, 0xca], // SOF10
   ]) {
     const out = encode({ width: W, height: H, data: source, channels: 4 }, { ...opts, ...extra });
-    assert.equal(frameType(out), sof, `frame type 0x${sof.toString(16)}`);
-    const back = decode(out).data;
+    const dec = decode(out);
+    assert.equal(dec.startOfFrame, sof, `frame type 0x${sof.toString(16)}`);
     let max = 0;
-    for (let i = 0; i < back.length; i++) max = Math.max(max, Math.abs(back[i] - baseline[i]));
+    for (let i = 0; i < dec.data.length; i++) max = Math.max(max, Math.abs(dec.data[i] - baseline[i]));
     assert.equal(max, 0, `${JSON.stringify(extra)}: pixel-identical to the baseline encode`);
   }
 });
@@ -201,11 +192,11 @@ test('native progressive encode preserves an embedded ICC profile', () => {
   const icc = new Uint8Array(1800);
   for (let i = 0; i < icc.length; i++) icc[i] = (i * 7 + 3) & 0xff;
   const prog = encode({ width: W, height: H, data: source, channels: 4 }, { quality: 85, progressive: true, icc });
-  assert.equal(frameType(prog), 0xc2, 'SOF2 progressive');
-  const back = decodeComponents(prog).icc;
-  assert.ok(back && back.length === icc.length, 'ICC present, right length');
+  const comp = decodeComponents(prog);
+  assert.equal(comp.startOfFrame, 0xc2, 'SOF2 progressive');
+  assert.ok(comp.icc && comp.icc.length === icc.length, 'ICC present, right length');
   let same = true;
-  for (let i = 0; i < icc.length; i++) if (back[i] !== icc[i]) { same = false; break; }
+  for (let i = 0; i < icc.length; i++) if (comp.icc[i] !== icc[i]) { same = false; break; }
   assert.ok(same, 'ICC bytes preserved through the transcode');
 });
 

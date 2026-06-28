@@ -115,12 +115,12 @@ export function decode(input, options = {}) {
   // Fancy (bilinear) chroma upsampling — smooth out the nearest-neighbour
   // replication the decoder used for subsampled components, matching libjpeg.
   // On by default; pass { fancyUpsampling: false } for the raw replicated planes.
-  if (options.fancyUpsampling !== false && (result.maxH > 1 || result.maxV > 1)) {
+  if (options.fancyUpsampling !== false) {
     components = components.map((plane, i) => {
       const hSub = result.maxH / result.componentSampling[i].h;
       const vSub = result.maxV / result.componentSampling[i].v;
-      if (hSub <= 1 && vSub <= 1) return plane;
-      return fancyUpsample(plane.slice(), result.width, result.height, hSub, vSub);
+      if (hSub <= 1 && vSub <= 1) return plane; // a full-res component (e.g. luma) — left as-is
+      return fancyUpsample(plane, result.width, result.height, hSub, vSub);
     });
   }
 
@@ -195,7 +195,7 @@ export function encode(image, options = {}) {
     return optimize(baseline, {
       progressive: !!options.progressive,
       arithmetic: !!options.arithmetic,
-      mostOptimalCoding: options.mostOptimalCoding ?? false,
+      mostOptimalCoding: options.mostOptimalCoding,
       strip: false,
     });
   }
