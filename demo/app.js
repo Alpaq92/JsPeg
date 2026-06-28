@@ -26,6 +26,9 @@ function fmtBytes(n) {
   return `${(n / (1024 * 1024)).toFixed(2)} MB`;
 }
 
+/** Object URL for a JPEG byte array (caller revokes when done). */
+const jpegBlobUrl = (bytes) => URL.createObjectURL(new Blob([bytes], { type: 'image/jpeg' }));
+
 function renderMeta(dl, rows) {
   dl.innerHTML = '';
   for (const [k, v, cls] of rows) {
@@ -162,37 +165,143 @@ function doEncode() {
   renderMeta($('encodeMeta'), rows);
 
   const a = $('encodeDownload');
-  a.href = URL.createObjectURL(new Blob([jpg], { type: 'image/jpeg' }));
+  a.href = jpegBlobUrl(jpg);
   a.hidden = false;
 }
 
+// Every optimize() mode, shown side by side. The arithmetic streams are valid
+// JPEGs our own decoder can read (so we can prove they're lossless) even though
+// native browsers can't display them.
+const OPT_MODES = [
+  { label: 'Optimized Huffman', file: 'jspeg-huffman.jpg', opts: {}, lossless: true, native: true },
+  { label: 'Progressive', file: 'jspeg-progressive.jpg', opts: { progressive: true }, lossless: true, native: true },
+  { label: 'Arithmetic (SOF9)', file: 'jspeg-arith.jpg', opts: { arithmetic: true }, lossless: true, native: false },
+  { label: 'Arithmetic progressive (SOF10)', file: 'jspeg-arith-prog.jpg', opts: { arithmetic: true, progressive: true }, lossless: true, native: false },
+  { label: 'Trellis (lossy)', file: 'jspeg-trellis.jpg', opts: { trellis: true }, lossless: false, native: true },
+];
+
+const DOWNLOAD_SVG = '<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v10"/><path d="M8 9l4 4 4-4"/><path d="M4 15v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"/></svg>';
+
+let optUrls = []; // blob URLs from the last comparison, revoked before the next
+
+function psnr(a, b) {
+  let sum = 0;
+  let n = 0;
+  for (let i = 0; i < a.length; i += 4) {
+    for (let c = 0; c < 3; c++) { // RGB only, skip alpha
+      const d = a[i + c] - b[i + c];
+      sum += d * d;
+      n++;
+    }
+  }
+  const mse = sum / n;
+  return mse === 0 ? Infinity : 10 * Math.log10((255 * 255) / mse);
+}
+
+// Run every optimize() mode and produce render-ready rows; renderOptTable just
+// maps the fields to cells.
 function doOptimize() {
   if (!currentJpegBytes) return;
-  try {
-    const t0 = performance.now();
-    const out = optimize(currentJpegBytes);
-    const ms = performance.now() - t0;
+  optUrls.forEach(URL.revokeObjectURL);
+  optUrls = [];
 
-    // prove losslessness in the browser
-    const a = decode(currentJpegBytes).data;
-    const b = decode(out).data;
-    let identical = a.length === b.length;
-    for (let i = 0; identical && i < a.length; i++) identical = a[i] === b[i];
+  const origLen = currentJpegBytes.length;
+  const ref = decode(currentJpegBytes).data;
 
-    const saved = (1 - out.length / currentJpegBytes.length) * 100;
-    renderMeta($('optimizeMeta'), [
-      ['Original', fmtBytes(currentJpegBytes.length)],
-      ['Optimized', fmtBytes(out.length)],
-      ['Saved', `${saved.toFixed(1)}%`, saved > 0 ? 'good' : ''],
-      ['Pixels identical', identical ? 'yes ✓' : 'NO', identical ? 'good' : 'error'],
-      ['Took', `${ms.toFixed(1)} ms`],
-    ]);
-    const dl = $('optimizeDownload');
-    dl.href = URL.createObjectURL(new Blob([out], { type: 'image/jpeg' }));
-    dl.hidden = false;
-  } catch (err) {
-    setStatus(`Optimize failed: ${err.message}`, true);
+  const results = OPT_MODES.map((m) => {
+    try {
+      const out = optimize(currentJpegBytes, m.opts);
+      const back = decode(out).data;
+      let qualityText;
+      let qClass = '';
+      if (m.lossless) {
+        let identical = back.length === ref.length;
+        for (let i = 0; identical && i < ref.length; i++) identical = ref[i] === back[i];
+        qualityText = identical ? 'lossless ✓' : 'MISMATCH ✗';
+        qClass = identical ? 'good' : 'error';
+      } else {
+        const p = psnr(ref, back);
+        qualityText = `lossy · PSNR ${isFinite(p) ? p.toFixed(1) + ' dB' : '∞'}`;
+        qClass = 'lossy';
+      }
+      if (!m.native) qualityText += ' · ⚠ not browser-native';
+      const saved = (1 - out.length / origLen) * 100;
+      const url = jpegBlobUrl(out);
+      optUrls.push(url);
+      return {
+        ok: true,
+        label: m.label,
+        file: m.file,
+        sizeText: fmtBytes(out.length),
+        savedText: `${saved.toFixed(1)}%`, // positive = smaller than the original
+        savedClass: saved >= 0 ? 'good' : 'warn',
+        qualityText,
+        qClass,
+        url,
+      };
+    } catch (err) {
+      return { ok: false, label: m.label, error: err.message };
+    }
+  });
+
+  renderOptTable(origLen, results);
+}
+
+function td(content, cls) {
+  const el = document.createElement('td');
+  if (content instanceof Node) el.appendChild(content);
+  else el.textContent = content;
+  if (cls) el.className = cls;
+  return el;
+}
+
+function downloadCell(r) {
+  const a = document.createElement('a');
+  a.href = r.url;
+  a.download = r.file;
+  a.className = 'dl-icon';
+  a.innerHTML = DOWNLOAD_SVG;
+  a.title = `Download ${r.file}`;
+  return td(a);
+}
+
+function renderOptTable(origLen, results) {
+  const wrap = $('optimizeResults');
+  wrap.innerHTML = '';
+  const table = document.createElement('table');
+  table.className = 'opt-table';
+
+  const header = document.createElement('tr');
+  for (const h of ['Mode', 'Size', 'Saved', 'Quality', '']) {
+    const th = document.createElement('th');
+    th.textContent = h;
+    header.appendChild(th);
   }
+  table.appendChild(header);
+
+  const orig = document.createElement('tr');
+  orig.className = 'orig';
+  orig.append(td('Original (baseline)'), td(fmtBytes(origLen)), td('—'), td('—'), td(''));
+  table.appendChild(orig);
+
+  for (const r of results) {
+    const tr = document.createElement('tr');
+    if (!r.ok) {
+      const err = td(r.error, 'error');
+      err.colSpan = 4;
+      tr.append(td(r.label), err);
+    } else {
+      tr.append(
+        td(r.label),
+        td(r.sizeText),
+        td(r.savedText, r.savedClass),
+        td(r.qualityText, r.qClass),
+        downloadCell(r),
+      );
+    }
+    table.appendChild(tr);
+  }
+  wrap.appendChild(table);
 }
 
 // ---- wire up events --------------------------------------------------------
