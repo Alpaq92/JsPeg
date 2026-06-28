@@ -218,6 +218,9 @@ output { color: var(--text); font-variant-numeric: tabular-nums; min-width: 2ch;
 .opt-table td.warn { color: var(--accent); font-weight: 600; }
 .opt-table .dl-icon { display: inline-flex; align-items: center; color: var(--accent-2); text-decoration: none; }
 .opt-table .dl-icon:hover { color: var(--accent); }
+.info-glyph { color: var(--muted); cursor: help; margin-right: 0.3em; }
+.info-glyph svg { vertical-align: -0.18em; }
+.info-glyph:hover { color: var(--accent-2); }
 
 footer {
   text-align: center;

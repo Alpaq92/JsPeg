@@ -182,6 +182,8 @@ const OPT_MODES = [
 
 const DOWNLOAD_SVG = '<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v10"/><path d="M8 9l4 4 4-4"/><path d="M4 15v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"/></svg>';
 
+const INFO_SVG = '<svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><line x1="12" y1="11" x2="12" y2="16"/><line x1="12" y1="8" x2="12" y2="8"/></svg>';
+
 let optUrls = []; // blob URLs from the last comparison, revoked before the next
 
 function psnr(a, b) {
@@ -213,18 +215,23 @@ function doOptimize() {
       const out = optimize(currentJpegBytes, m.opts);
       const back = decode(out).data;
       let qualityText;
+      let qualityPre; // lossy row: text before the info glyph
+      let qualityPost; // lossy row: text after the info glyph
       let qClass = '';
+      let psnrInfo;
       if (m.lossless) {
         let identical = back.length === ref.length;
         for (let i = 0; identical && i < ref.length; i++) identical = ref[i] === back[i];
         qualityText = identical ? 'lossless ✓' : 'MISMATCH ✗';
         qClass = identical ? 'good' : 'error';
+        if (!m.native) qualityText += ' · ⚠ not browser-native';
       } else {
         const p = psnr(ref, back);
-        qualityText = `lossy ⚠ PSNR ${isFinite(p) ? p.toFixed(1) + ' dB' : '∞'}`;
+        qualityPre = 'lossy ⚠ · ';
+        qualityPost = `PSNR ${isFinite(p) ? p.toFixed(1) + ' dB' : '∞'}`;
         qClass = 'lossy';
+        psnrInfo = 'PSNR = Peak Signal-to-Noise Ratio vs the original. Higher is closer; ≳50 dB is visually lossless, ∞ = bit-identical.';
       }
-      if (!m.native) qualityText += ' · ⚠ not browser-native';
       const saved = (1 - out.length / origLen) * 100;
       const url = jpegBlobUrl(out);
       optUrls.push(url);
@@ -236,7 +243,10 @@ function doOptimize() {
         savedText: `${saved.toFixed(1)}%`, // positive = smaller than the original
         savedClass: saved >= 0 ? 'good' : 'warn',
         qualityText,
+        qualityPre,
+        qualityPost,
         qClass,
+        psnrInfo,
         url,
       };
     } catch (err) {
@@ -263,6 +273,24 @@ function downloadCell(r) {
   a.innerHTML = DOWNLOAD_SVG;
   a.title = `Download ${r.file}`;
   return td(a);
+}
+
+// A small ⓘ that reveals `tip` on hover (native title tooltip).
+function infoGlyph(tip) {
+  const span = document.createElement('span');
+  span.className = 'info-glyph';
+  span.title = tip;
+  span.innerHTML = INFO_SVG;
+  return span;
+}
+
+// Quality cell — plain text, except the lossy row gets an info glyph between its
+// two text parts (so the glyph position is structural, not parsed from a string).
+function qualityCell(r) {
+  if (!r.psnrInfo) return td(r.qualityText, r.qClass);
+  const cell = td('', r.qClass);
+  cell.append(r.qualityPre, infoGlyph(r.psnrInfo), r.qualityPost);
+  return cell;
 }
 
 function renderOptTable(origLen, results) {
@@ -295,7 +323,7 @@ function renderOptTable(origLen, results) {
         td(r.label),
         td(r.sizeText),
         td(r.savedText, r.savedClass),
-        td(r.qualityText, r.qClass),
+        qualityCell(r),
         downloadCell(r),
       );
     }
