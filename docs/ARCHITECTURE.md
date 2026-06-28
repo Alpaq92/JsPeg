@@ -105,8 +105,8 @@ same `processScan(reader, scanHeader)` / `dispose()` lifecycle:
   `JpegBlockAllocator` buffer for progressive).
 - **DCT scratch**: `Float32Array`.
 - **Output**: `Uint8ClampedArray` (RGBA, canvas-ready).
-- The entropy reader emulates a 64-bit bit register with a JS `Number` + power-of-two
-  masking; the QM-coder mirrors C# `int` (32-bit signed) math via `| 0`.
+- The entropy reader emulates a 64-bit bit register with a single JS `Number` and
+  power-of-two masking; the QM-coder mirrors C#'s `int` (32-bit signed) math via the `| 0` idiom.
 
 See [TESTS.md](TESTS.md) for how each path is validated, and
 [OPTIMIZATION.md](OPTIMIZATION.md) for the optimizer.
