@@ -62,11 +62,10 @@
       </section>
 
       <section class="card" id="optimizePanel" hidden>
-        <h2>Optimize losslessly</h2>
-        <p class="hint">Re-codes the existing baseline JPEG's Huffman tables. The decoded pixels stay identical — only the file shrinks.</p>
-        <button id="optimizeBtn" type="button">Optimize this JPEG</button>
-        <dl id="optimizeMeta" class="meta"></dl>
-        <a id="optimizeDownload" class="download" hidden download="jspeg-optimized.jpg">Download optimized JPEG</a>
+        <h2>Optimize — every mode, side by side</h2>
+        <p class="hint">Each mode re-encodes this baseline JPEG. The <strong>lossless</strong> modes keep the decoded pixels <em>identical</em> — only the file shrinks; <strong>trellis</strong> is lossy (it re-quantizes). The <strong>arithmetic</strong> streams are valid, smaller JPEGs that native browsers can't display (storage / interop only).</p>
+        <button id="optimizeBtn" type="button">Compare every optimize mode</button>
+        <div id="optimizeResults" class="opt-results"></div>
       </section>
     </div>
   </main>

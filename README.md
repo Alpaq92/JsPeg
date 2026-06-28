@@ -15,6 +15,10 @@ JsPeg stays **single-license MIT** — see [the Notes](#notes).
 
 ### ▶ [Live demo](https://alpaq92.github.io/JsPeg/)
 
+Drop a JPEG to decode it, re-encode at any quality, and **compare every optimize
+mode side by side** — Huffman, progressive, arithmetic (SOF9/SOF10) and trellis —
+with the exact size and percentage each one saves. Everything runs on your device.
+
 ## What it does
 
 - **Decode** baseline, extended-sequential, progressive, lossless, and
