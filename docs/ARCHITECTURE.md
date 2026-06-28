@@ -48,8 +48,9 @@ pass 1 (scan):     Huffman-decode symbols only → tally frequencies → build o
 pass 2 (optimize): re-emit the same coefficients with the new tables; copy/strip other segments
 ```
 
-The other `optimize()` modes instead extract the coefficients into a
-`JpegBlockAllocator` and re-emit them differently (all but trellis are lossless):
+The other `optimize()` modes instead extract the quantized coefficients into a
+`JpegBlockAllocator` and re-emit them in a different layout (all but trellis remain
+lossless):
 
 - `{ progressive }` → **progressive** scans via
   `ScanEncoder/JpegHuffmanProgressiveScanEncoder` (the inverse of the progressive

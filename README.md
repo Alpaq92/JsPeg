@@ -15,16 +15,17 @@ JsPeg stays **single-license MIT** — see [the Notes](#notes).
 
 ### ▶ [Live demo](https://alpaq92.github.io/JsPeg/)
 
-Drop a JPEG to decode it, re-encode at any quality, and **compare every optimize
+Drop a JPEG to decode it, re-encode it at any quality, and **compare every optimize
 mode side by side** — Huffman, progressive, arithmetic (SOF9/SOF10) and trellis —
-with the exact size and percentage each one saves. Everything runs on your device.
+with the exact byte size and percentage each one saves. Everything runs locally, on
+your own device.
 
 ## What it does
 
 - **Decode** baseline, extended-sequential, progressive, lossless, and
-  **arithmetic-coded** (SOF9/10) JPEG; **8 or 12-bit**; 4:4:4 / 4:2:2 / 4:2:0
-  subsampling; grayscale / YCbCr / RGB / CMYK; reads EXIF orientation and embedded
-  **ICC profiles**.
+  **arithmetic-coded** (SOF9/10) JPEG, at **8 or 12-bit** precision; 4:4:4 / 4:2:2 /
+  4:2:0 chroma subsampling; grayscale / YCbCr / RGB / CMYK; reads EXIF orientation
+  and any embedded **ICC profile**.
 - **Encode** straight from pixels — baseline JPEG (standard or optimized Huffman),
   **progressive** or **arithmetic** (SOF2 / SOF9 / SOF10), or truly **lossless**
   (SOF3 — 7 spatial predictors, 8–16-bit precision, exact bit-for-bit round-trip).
@@ -83,12 +84,12 @@ npm test                 # pure-JS test suite (node --test), no external tooling
 node tools/serve.mjs     # serve the demo at http://localhost:8080
 ```
 
-Tests cover decode against frozen libjpeg conformance vectors (including SOF9 and
-SOF10 **arithmetic** vectors), dependency-free encode→decode round-trips over a set
-of sample images (baseline **and exact lossless SOF3**, all 7 predictors), CMYK/YCCK
-and EXIF-orientation handling, and codec unit tests.
-The optimizer is checked across all its lossless modes — Huffman re-coding,
-baseline→**progressive**, and baseline→**arithmetic** (SOF9) transcodes, each
+Tests cover decode against frozen libjpeg conformance vectors (including both the
+SOF9 and SOF10 **arithmetic** vectors), dependency-free encode→decode round-trips
+over a broad set of sample images (baseline **and exact lossless SOF3**, all 7
+predictors), CMYK/YCCK and EXIF-orientation handling, and codec unit tests.
+The optimizer is checked across all of its lossless modes — Huffman re-coding,
+baseline→**progressive**, and baseline→**arithmetic** (SOF9) transcodes, each one
 pixel-identical — plus the lossy **trellis** mode (valid, smaller, high-PSNR),
 idempotence, and clear errors on non-baseline input.
 
