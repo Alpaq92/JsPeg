@@ -27,7 +27,10 @@ const _scratch = new Int16Array(64);
 
 /**
  * Write a block to the output writer, replicating samples when the component is
- * subsampled (nearest-neighbour upsampling, matching the reference).
+ * subsampled (nearest-neighbour upsampling, matching the reference). Each native
+ * sample lands at the top-left of its hSub×vSub replication block — an invariant
+ * `upsample.js` relies on to recover the native grid for fancy (bilinear)
+ * upsampling, so keep replication exact (no smoothing here).
  */
 export function writeBlock(outputWriter, blockData, blockOffset, componentIndex, x, y, horizontalSubsamplingFactor, verticalSubsamplingFactor) {
   if (horizontalSubsamplingFactor === 1 && verticalSubsamplingFactor === 1) {

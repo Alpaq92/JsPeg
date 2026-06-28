@@ -64,7 +64,10 @@ for (const sample of SAMPLES) {
     const src = sample.make(w, h);
     for (const [opts, meanTol] of [
       [{ quality: 92, subsampling: '4:4:4' }, 2.5],
-      [{ quality: 88, subsampling: '4:2:0' }, 4.5],
+      // 4:2:0 decode uses fancy (bilinear) chroma upsampling, which smooths the
+      // saturated hard edges of the synthetic "Colour bars" sample — better on
+      // real photos, marginally looser here. Still the correctness gate.
+      [{ quality: 88, subsampling: '4:2:0' }, 7],
     ]) {
       const jpg = encode({ width: w, height: h, data: src, channels: 4 }, { ...opts, grayscale: sample.gray });
       const img = decode(jpg);
@@ -161,4 +164,65 @@ test('lossless 12-bit grayscale round-trips exactly', () => {
   let max = 0;
   for (let i = 0; i < w * h; i++) max = Math.max(max, Math.abs(gray[i] - comp.components[0][i]));
   assert.equal(max, 0, `12-bit lossless exact (maxDiff ${max})`);
+});
+
+// --- native progressive / arithmetic encode from pixels ----------------------
+// encode({ progressive }) / { arithmetic } emit the requested frame type
+// straight from pixels (internally: a baseline encode + a lossless transcode),
+// so the decoded pixels are identical to a plain baseline encode. decode() and
+// decodeComponents() already return the SOFn marker byte as `startOfFrame`.
+test('native progressive / arithmetic encode from pixels (right frame type, pixel-identical)', () => {
+  const opts = { quality: 85, subsampling: '4:2:0' };
+  const baseline = decode(encode({ width: W, height: H, data: source, channels: 4 }, opts)).data;
+  for (const [extra, sof] of [
+    [{ progressive: true }, 0xc2], // SOF2
+    [{ arithmetic: true }, 0xc9], // SOF9
+    [{ arithmetic: true, progressive: true }, 0xca], // SOF10
+  ]) {
+    const out = encode({ width: W, height: H, data: source, channels: 4 }, { ...opts, ...extra });
+    const dec = decode(out);
+    assert.equal(dec.startOfFrame, sof, `frame type 0x${sof.toString(16)}`);
+    let max = 0;
+    for (let i = 0; i < dec.data.length; i++) max = Math.max(max, Math.abs(dec.data[i] - baseline[i]));
+    assert.equal(max, 0, `${JSON.stringify(extra)}: pixel-identical to the baseline encode`);
+  }
+});
+
+test('native progressive encode preserves an embedded ICC profile', () => {
+  const icc = new Uint8Array(1800);
+  for (let i = 0; i < icc.length; i++) icc[i] = (i * 7 + 3) & 0xff;
+  const prog = encode({ width: W, height: H, data: source, channels: 4 }, { quality: 85, progressive: true, icc });
+  const comp = decodeComponents(prog);
+  assert.equal(comp.startOfFrame, 0xc2, 'SOF2 progressive');
+  assert.ok(comp.icc && comp.icc.length === icc.length, 'ICC present, right length');
+  let same = true;
+  for (let i = 0; i < icc.length; i++) if (comp.icc[i] !== icc[i]) { same = false; break; }
+  assert.ok(same, 'ICC bytes preserved through the transcode');
+});
+
+// --- ICC colour profile embed (encode) + read (decode) -----------------------
+
+test('ICC profile embeds and reads back byte-exact (single + multi-chunk)', () => {
+  const w = 32;
+  const h = 24;
+  const src = new Uint8Array(w * h * 4);
+  for (let i = 0; i < w * h; i++) { src[i * 4] = i % 200; src[i * 4 + 1] = 100; src[i * 4 + 2] = 200 - (i % 150); src[i * 4 + 3] = 255; }
+  for (const size of [2000, 150000]) { // 1 chunk (≤65519), then multi-chunk
+    const icc = new Uint8Array(size);
+    for (let i = 0; i < size; i++) icc[i] = (i * 7 + 13) & 0xff;
+    const jpg = encode({ width: w, height: h, data: src, channels: 4 }, { quality: 85, icc });
+    const got = decodeComponents(jpg).icc;
+    assert.ok(got && got.length === size, `ICC ${size}: present with the right length`);
+    let same = true;
+    for (let i = 0; same && i < size; i++) same = got[i] === icc[i];
+    assert.ok(same, `ICC ${size}: round-trips byte-exact`);
+    assert.equal(decode(jpg).width, w, `ICC ${size}: the image still decodes`);
+  }
+});
+
+test('no ICC profile -> decodeComponents().icc is null', () => {
+  const w = 16;
+  const h = 16;
+  const src = new Uint8Array(w * h * 4).fill(128);
+  assert.equal(decodeComponents(encode({ width: w, height: h, data: src, channels: 4 }, { quality: 80 })).icc, null);
 });

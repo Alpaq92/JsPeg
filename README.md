@@ -22,9 +22,11 @@ with the exact size and percentage each one saves. Everything runs on your devic
 ## What it does
 
 - **Decode** baseline, extended-sequential, progressive, lossless, and
-  **arithmetic-coded** (SOF9/10) JPEG; 4:4:4 / 4:2:2 / 4:2:0 subsampling;
-  grayscale / YCbCr / RGB / CMYK; applies EXIF orientation.
-- **Encode** baseline JPEG (standard or optimized Huffman tables), or truly **lossless**
+  **arithmetic-coded** (SOF9/10) JPEG; **8 or 12-bit**; 4:4:4 / 4:2:2 / 4:2:0
+  subsampling; grayscale / YCbCr / RGB / CMYK; reads EXIF orientation and embedded
+  **ICC profiles**.
+- **Encode** straight from pixels — baseline JPEG (standard or optimized Huffman),
+  **progressive** or **arithmetic** (SOF2 / SOF9 / SOF10), or truly **lossless**
   (SOF3 — 7 spatial predictors, 8–16-bit precision, exact bit-for-bit round-trip).
 - **Optimize** an existing JPEG — losslessly re-code its Huffman tables, or
   transcode to **progressive** (successive approximation: renders incrementally
@@ -41,6 +43,9 @@ const { width, height, data } = decode(jpegBytes);
 
 // encode RGBA -> JPEG
 const jpg = encode({ width, height, data, channels: 4 }, { quality: 85, subsampling: '4:2:0' });
+
+// encode RGBA -> progressive (or arithmetic) JPEG, straight from pixels
+const prog = encode({ width, height, data, channels: 4 }, { quality: 85, progressive: true });
 
 // encode RGBA -> lossless JPEG (SOF3, exact round-trip)
 const exact = encode({ width, height, data, channels: 4 }, { lossless: true });
@@ -112,16 +117,23 @@ BSD/IJG/Apache/GPL implementations (mozjpeg, libjpeg-turbo, libjpeg.NET, …) we
 deliberately **not** ported — doing so would add a second license, breaking the
 single-license guarantee.
 
-**Codec details.** Subsampled chroma is upsampled by replication, like the
-original. CMYK and YCCK (Adobe APP14) 4-component images decode to RGB, and EXIF
+**Codec details.** Subsampled chroma is upsampled with a **fancy (bilinear)**
+filter by default — a centered-phase interpolation matching libjpeg's, so a
+subsampled decode lands within a couple of levels of the libjpeg reference (pass
+`{ fancyUpsampling: false }` for plain nearest-neighbour replication). CMYK and
+YCCK (Adobe APP14) 4-component images decode to RGB, and EXIF
 orientation is read from the APP1 segment and applied by `decode()` (pass
 `applyOrientation: false` to opt out). **Arithmetic coding** is fully supported by
 the clean-room QM-coder: SOF9 + SOF10 decode is validated against conformance
-vectors, and `optimize()` can also *encode* arithmetic — SOF9, and SOF10 with
-`progressive` (our output round-trips through libjpeg-turbo). **Lossless (SOF3)**
+vectors, and both `encode()` (from pixels) and `optimize()` (transcoding) *emit*
+arithmetic — SOF9, or SOF10 with `progressive` (our output round-trips through
+libjpeg-turbo). Progressive (SOF2) is likewise available straight from `encode()`. **Lossless (SOF3)**
 is supported both ways — `encode({ lossless: true })` (predictors 1–7, **2–16-bit
 precision**) and decode, cross-checked against an independent lossless decoder
-(including a 12-bit round-trip). 12-bit *DCT* decode is not yet supported. The
+(including a 12-bit round-trip). **12-bit DCT** (extended-sequential / progressive)
+decodes too — cross-checked against libjpeg-turbo. Embedded **ICC colour profiles**
+are read on decode (`decodeComponents().icc`) and can be embedded on encode
+(`encode({ icc })`). The
 differential / hierarchical frame types (SOF5–7 / SOF13–15) are out of scope:
 they exist only inside hierarchical mode (T.81 Annex J), which even libjpeg never
 implemented — so there is no reference decoder to verify an implementation against.

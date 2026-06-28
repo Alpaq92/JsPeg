@@ -7,14 +7,14 @@ network. Committed fixtures let the tests run anywhere Node does.
 npm test
 ```
 
-82 tests across six files.
+92 tests across six files.
 
 ## Test files (`test/`)
 
 | File | Covers |
 |---|---|
-| `decode.test.mjs` | Decode vs. frozen **libjpeg conformance vectors** — compares RGBA against a reference decode within per-fixture tolerances. Includes the SOF9 and SOF10 **arithmetic** vectors. |
-| `roundtrip.test.mjs` | Dependency-free **encode → decode** round-trips over procedural sample images (`demo/samples.js`), plus **exact lossless (SOF3)** round-trips for all 7 predictors and **12-bit** precision (which also exercise the otherwise-unfixtured lossless decoder). |
+| `decode.test.mjs` | Decode vs. frozen **libjpeg conformance vectors** — compares RGBA against a reference decode within per-fixture tolerances. Includes the SOF9 / SOF10 **arithmetic** and a **12-bit** (SOF1) vector. |
+| `roundtrip.test.mjs` | Dependency-free **encode → decode** round-trips over procedural sample images (`demo/samples.js`); **native progressive / arithmetic** encode (SOF2/9/10) from pixels (pixel-identical to baseline, ICC preserved); **exact lossless (SOF3)** round-trips for all 7 predictors and **12-bit** precision (which also exercise the otherwise-unfixtured lossless decoder); and **ICC profile** embed/read round-trips. |
 | `optimize.test.mjs` | Optimizer **losslessness** across Huffman / progressive (successive approximation) / arithmetic (SOF9) / arithmetic-progressive (SOF10) transcodes, the **lossy trellis** mode, **idempotence**, and clear errors on non-baseline input. |
 | `cmyk.test.mjs` | CMYK / YCCK (Adobe APP14) 4-component decode to RGB. |
 | `orientation.test.mjs` | All 8 **EXIF orientations** vs. the reference transform. |
@@ -38,11 +38,12 @@ dimensions and the comparison tolerances.
 
 ## Tolerance philosophy
 
-Decode comparisons use a **strict mean** and a **loose max** absolute error. The
-mean is the correctness signal; the max is allowed to be larger on subsampled
-images at sharp colour edges, because JsPeg replicates chroma (nearest-neighbour,
-like the reference design) while libjpeg does "fancy" bilinear upsampling. The
-encoder is validated separately and dependency-free by the in-memory round-trips.
+Decode comparisons use a **strict mean** and a **loose max** absolute error — the
+mean is the correctness signal, the max absorbs the occasional ringing spike at a
+sharp edge. Because JsPeg now upsamples subsampled chroma with the same **fancy
+(bilinear)** filter as libjpeg, even the 4:2:0 / 4:2:2 vectors decode to within a
+few levels of the reference, so their tolerances are tight (mean ≤ 1.5, max ≤ 10).
+The encoder is validated separately and dependency-free by the in-memory round-trips.
 
 See [ARCHITECTURE.md](ARCHITECTURE.md) for what each pipeline does, and
 `test/fixtures/README.md` for the fixture list.

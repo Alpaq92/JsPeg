@@ -12,7 +12,7 @@ the EXIF-orientation reader adapted from [exifr](https://github.com/MikeKovarik/
 |---|---|
 | `decode(bytes, opts?)` | JPEG → `{ width, height, data }` (RGBA `Uint8ClampedArray`) |
 | `decodeComponents(bytes)` | JPEG → raw component planes (no colour conversion) |
-| `encode({ width, height, data }, opts?)` | RGBA → baseline JPEG bytes (or lossless SOF3 with `{ lossless }`) |
+| `encode({ width, height, data }, opts?)` | RGBA → JPEG bytes — baseline, **progressive** / **arithmetic** (`{ progressive }` / `{ arithmetic }`), or lossless SOF3 (`{ lossless }`) |
 | `optimize(bytes, opts?)` | JPEG → smaller JPEG, pixels unchanged (see [OPTIMIZATION.md](OPTIMIZATION.md)) |
 
 The class-level API (`JpegDecoder`, `JpegEncoder`, `JpegOptimizer`, the table and
@@ -25,8 +25,8 @@ writer types) is exported too, for custom pipelines.
 bytes → JpegReader (marker scan) → JpegDecoder (dispatch DQT/DHT/DAC/DRI/SOFn/SOS/APPn)
       → createScanDecoder(SOFn) → ScanDecoder:
             entropy-decode coefficients → dequantize + un-zig-zag → inverse DCT
-            → level shift → JpegBlockOutputWriter (component planes, chroma upsample)
-      → colorConverter (YCbCr / CMYK / YCCK → RGB) → RGBA
+            → level shift → JpegBlockOutputWriter (full-resolution component planes)
+      → fancy bilinear chroma upsampling (upsample.js) → colorConverter (YCbCr / CMYK / YCCK → RGB) → RGBA
       → EXIF orientation applied (exif.js), unless { applyOrientation: false }
 ```
 
@@ -35,6 +35,10 @@ bytes → JpegReader (marker scan) → JpegDecoder (dispatch DQT/DHT/DAC/DRI/SOF
 RGBA → JpegBufferInputReader → colorConverter (RGB → YCbCr) + subsample
      → forward DCT (exact DCT-II) → quantize → Huffman encode → JpegWriter → bytes
 ```
+`{ progressive }` / `{ arithmetic }` encode a baseline and then transcode it
+(losslessly, via `optimize()`) to SOF2 / SOF9 / SOF10 — the coefficients are
+identical, so the result matches a direct progressive/arithmetic encode.
+
 `{ lossless }` takes a separate path (`JpegLosslessEncoder`): no DCT or quantization —
 spatial prediction (T.81's 7 predictors, 2–16-bit) + Huffman of residuals, for an exact round-trip.
 
@@ -87,8 +91,8 @@ same `processScan(reader, scanHeader)` / `dispose()` lifecycle:
 | Entry / API | `index.js` |
 | Stream parsing | `JpegReader`, `JpegBitReader`, `JpegMarker`, `markerScan` |
 | Headers & tables | `JpegFrameHeader`, `JpegScanHeader`, `JpegQuantizationTable`, `JpegStandardQuantizationTable`, `JpegHuffmanDecodingTable`, `JpegArithmeticDecodingTable`, `JpegArithmeticStatistics`, `JpegElementPrecision`, `JpegZigZag` |
-| Math / transforms | `JpegMathHelper`, `dct` (stb IDCT + exact FDCT), `colorConverter` |
-| Decode | `JpegDecoder` + `ScanDecoder/*` |
+| Math / transforms | `JpegMathHelper`, `dct` (stb IDCT + exact FDCT), `colorConverter`, `upsample` (fancy bilinear chroma) |
+| Decode | `JpegDecoder` + `ScanDecoder/*`; `icc` / `exif` / `colorConverter` for metadata + colour |
 | Block buffers / output | `JpegBlockAllocator`, `JpegBlockOutputWriter`, `output/JpegBufferOutputWriter`, `JpegPartialScanlineAllocator` |
 | Encode | `JpegEncoder`, `JpegLosslessEncoder`, `JpegWriter`, `JpegHuffmanEncoding*`, `JpegStandardHuffmanEncodingTable`, `JpegBlockInputReader`, `input/JpegBufferInputReader` |
 | Optimize | `JpegOptimizer`, `JpegTrellis`, `ScanEncoder/*` (progressive + arithmetic encoders) |

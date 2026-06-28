@@ -21,6 +21,7 @@ export { JpegStandardHuffmanEncodingTable } from './JpegStandardHuffmanEncodingT
 export { JpegWriter } from './JpegWriter.js';
 export { JpegOptimizer } from './JpegOptimizer.js';
 export { encodeLossless } from './JpegLosslessEncoder.js';
+export { readIccProfile, iccApp2Segments } from './icc.js';
 export {
   componentsToRGBA, readAdobeTransform, rgbToYCbCrPlanes, rgbToGrayPlane, buildJfifApp0,
 } from './colorConverter.js';
@@ -34,10 +35,12 @@ import { JpegBufferInputReader } from './input/JpegBufferInputReader.js';
 import { JpegStandardQuantizationTable } from './JpegStandardQuantizationTable.js';
 import { JpegStandardHuffmanEncodingTable } from './JpegStandardHuffmanEncodingTable.js';
 import { encodeLossless } from './JpegLosslessEncoder.js';
+import { readIccProfile, iccApp2Segments } from './icc.js';
 import {
   componentsToRGBA, readAdobeTransform, rgbToYCbCrPlanes, rgbToGrayPlane, buildJfifApp0,
 } from './colorConverter.js';
 import { readExifOrientation, applyOrientation } from './exif.js';
+import { fancyUpsample } from './upsample.js';
 
 /** Coerce common inputs (ArrayBuffer, Buffer, typed array) to a Uint8Array. */
 function toUint8Array(data) {
@@ -83,6 +86,11 @@ export function decodeComponents(input) {
     numberOfComponents,
     componentIds,
     components: writer.components,
+    // per-component sampling, so callers can upsample subsampled chroma themselves
+    maxH: decoder.getMaximumHorizontalSampling(),
+    maxV: decoder.getMaximumVerticalSampling(),
+    componentSampling: frameHeader.components.map((c) => ({ h: c.horizontalSamplingFactor, v: c.verticalSamplingFactor })),
+    icc: readIccProfile(data),
     adobeTransform: readAdobeTransform(data),
     orientation: readExifOrientation(data),
     quality: q.ok ? q.quality : null,
@@ -97,14 +105,27 @@ export function decodeComponents(input) {
  * (width/height are swapped for 90°/270° rotations); pass `applyOrientation:
  * false` to get the raw pixel grid. The raw EXIF value is always on `orientation`.
  * @param {Uint8Array|ArrayBuffer} input
- * @param {{ applyOrientation?: boolean }} [options]
+ * @param {{ applyOrientation?: boolean, fancyUpsampling?: boolean }} [options]
  * @returns {{ width: number, height: number, data: Uint8ClampedArray, orientation: number }}
  */
 export function decode(input, options = {}) {
   const result = decodeComponents(input);
+  let components = result.components;
+
+  // Fancy (bilinear) chroma upsampling — smooth out the nearest-neighbour
+  // replication the decoder used for subsampled components, matching libjpeg.
+  // On by default; pass { fancyUpsampling: false } for the raw replicated planes.
+  if (options.fancyUpsampling !== false) {
+    components = components.map((plane, i) => {
+      const hSub = result.maxH / result.componentSampling[i].h;
+      const vSub = result.maxV / result.componentSampling[i].v;
+      if (hSub <= 1 && vSub <= 1) return plane; // a full-res component (e.g. luma) — left as-is
+      return fancyUpsample(plane, result.width, result.height, hSub, vSub);
+    });
+  }
+
   // Samples deeper than 8-bit (e.g. 12-bit lossless) are scaled down for the
   // 8-bit RGBA output; `result.components` keeps the raw native-precision planes.
-  let components = result.components;
   if (result.precision > 8) {
     const shift = result.precision - 8;
     components = components.map((plane) => {
@@ -149,19 +170,40 @@ const SUBSAMPLING = {
  * @param {'4:4:4'|'4:2:2'|'4:2:0'} [options.subsampling='4:2:0'] chroma subsampling
  * @param {boolean} [options.optimizeCoding=false] build image-specific Huffman tables
  * @param {boolean} [options.mostOptimalCoding=false] use the package-merge algorithm
+ * @param {boolean} [options.progressive=false] emit a progressive JPEG (SOF2, or SOF10 with `arithmetic`)
+ * @param {boolean} [options.arithmetic=false] emit an arithmetic-coded JPEG (SOF9, or SOF10 with `progressive`) — smaller, but not browser-viewable
  * @param {boolean} [options.grayscale] force single-component output
  * @param {boolean} [options.jfif=true] prepend a JFIF APP0 segment
+ * @param {Uint8Array} [options.icc] embed an ICC colour profile (APP2 segments)
  * @param {boolean} [options.lossless=false] encode a true-lossless (SOF3) JPEG —
  *   spatial prediction, no DCT or quantization (ignores `quality`/`subsampling`)
  * @param {number} [options.predictor=1] lossless predictor 1..7 (when `lossless`)
  * @returns {Uint8Array} the encoded JPEG
  */
 export function encode(image, options = {}) {
-  if (options.lossless) return encodeLossless(image, options);
+  if (options.lossless) {
+    return spliceAfterSoi(encodeLossless(image, options), options.icc ? iccApp2Segments(options.icc) : []);
+  }
+
+  // Native progressive / arithmetic output: encode a baseline, then transcode it
+  // (losslessly) to the requested layout. The coefficients are identical, so the
+  // result matches a direct progressive/arithmetic encode while reusing the
+  // verified scan encoders instead of duplicating them. { strip: false } keeps
+  // the JFIF / ICC segments the baseline just wrote in.
+  if (options.progressive || options.arithmetic) {
+    const baseline = encode(image, { ...options, progressive: false, arithmetic: false, optimizeCoding: false });
+    return optimize(baseline, {
+      progressive: !!options.progressive,
+      arithmetic: !!options.arithmetic,
+      mostOptimalCoding: options.mostOptimalCoding,
+      strip: false,
+    });
+  }
+
   const { width, height } = image;
   const quality = options.quality ?? 75;
   const subsampling = options.subsampling ?? '4:2:0';
-  const optimize = options.optimizeCoding ?? false;
+  const optimizeCoding = options.optimizeCoding ?? false;
   const jfif = options.jfif ?? true;
   const grayscale = options.grayscale
     ?? (image.channels === 1 || (Array.isArray(image.components) && image.components.length === 1));
@@ -180,7 +222,7 @@ export function encode(image, options = {}) {
   }
 
   // Huffman tables: standard, or builders (for optimized coding).
-  if (optimize) {
+  if (optimizeCoding) {
     encoder.setHuffmanTable(true, 0, null);
     encoder.setHuffmanTable(false, 0, null);
     if (!grayscale) {
@@ -222,17 +264,27 @@ export function encode(image, options = {}) {
   }
 
   encoder.setInputReader(new JpegBufferInputReader(width, height, planes));
-  const bytes = encoder.encode();
 
-  if (jfif) {
-    const app0 = buildJfifApp0();
-    const out = new Uint8Array(bytes.length + app0.length);
-    out.set(bytes.subarray(0, 2), 0); // SOI
-    out.set(app0, 2);
-    out.set(bytes.subarray(2), 2 + app0.length);
-    return out;
+  // Splice leading segments in right after SOI: JFIF APP0, then ICC APP2 chunks.
+  const leading = [];
+  if (jfif) leading.push(buildJfifApp0());
+  if (options.icc) leading.push(...iccApp2Segments(options.icc));
+  return spliceAfterSoi(encoder.encode(), leading);
+}
+
+/** Insert whole marker segments immediately after the 2-byte SOI. */
+function spliceAfterSoi(bytes, segments) {
+  if (segments.length === 0) return bytes.slice();
+  const extra = segments.reduce((n, s) => n + s.length, 0);
+  const out = new Uint8Array(bytes.length + extra);
+  out.set(bytes.subarray(0, 2), 0); // SOI
+  let off = 2;
+  for (const seg of segments) {
+    out.set(seg, off);
+    off += seg.length;
   }
-  return bytes.slice();
+  out.set(bytes.subarray(2), off);
+  return out;
 }
 
 /**

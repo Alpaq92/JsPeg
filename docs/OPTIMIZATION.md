@@ -66,12 +66,12 @@ What JsPeg does with each Start-of-Frame type, end to end (✅ supported · ◐ 
 | Marker | Frame type | Decode | Encode / `optimize()` | Notes |
 |---|---|---|---|---|
 | **SOF0** | Baseline DCT (Huffman) | ✅ | ✅ all modes | the common case; the only accepted optimizer **input** |
-| **SOF1** | Extended sequential DCT (Huffman) | ✅ | ✅ (as baseline) | 8-bit; handled like baseline |
-| **SOF2** | Progressive DCT (Huffman) | ✅ | ✅ as **output** of `{ progressive }` | multi-scan, incremental |
+| **SOF1** | Extended sequential DCT (Huffman) | ✅ | ✅ 8-bit (as baseline) | decode **8/12-bit** (12-bit cross-checked vs libjpeg-turbo); DCT **encode is 8-bit** (12-bit is encode-supported only for *lossless* SOF3) |
+| **SOF2** | Progressive DCT (Huffman) | ✅ | ✅ `encode({ progressive })` · `optimize({ progressive })` | multi-scan, incremental |
 | **SOF3** | Lossless (sequential) | ✅ verified | ✅ `encode({ lossless })` | predictors 1–7, **2–16-bit** (incl. 12-bit); cross-checked against an independent SOF3 decoder |
 | **SOF5–7** | Differential sequential / progressive / lossless (Huffman) | ✖ | ✖ | **hierarchical mode** only (T.81 Annex J) — libjpeg's own docs list it as unsupported, so there's no reference decoder, *and* it needs the whole multi-frame framework: **strictly worse than SOF11** (bigger build, equally unverifiable) |
-| **SOF9** | Extended sequential DCT, **arithmetic** | ✅ verified | ✅ as **output** of `{ arithmetic }` | clean-room QM-coder |
-| **SOF10** | Progressive DCT, **arithmetic** | ✅ verified | ✅ as **output** of `{ arithmetic, progressive }` | QM-coder + successive approximation; our output round-trips through libjpeg-turbo |
+| **SOF9** | Extended sequential DCT, **arithmetic** | ✅ verified | ✅ `encode({ arithmetic })` · `optimize({ arithmetic })` | clean-room QM-coder |
+| **SOF10** | Progressive DCT, **arithmetic** | ✅ verified | ✅ `encode({ arithmetic, progressive })` · `optimize(…)` | QM-coder + successive approximation; our output round-trips through libjpeg-turbo |
 | **SOF11** | Lossless, arithmetic | ✖ | ✖ | **orphan format** — even codecs with both arithmetic *and* lossless (incl. our upstream) never combined them, so no reference decoder exists to verify against |
 | **SOF13–15** | Differential …, arithmetic | ✖ | ✖ | arithmetic flavour of SOF5–7 — same hierarchical mode, same absence of any reference implementation |
 
