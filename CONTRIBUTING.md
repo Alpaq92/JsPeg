@@ -1,7 +1,8 @@
 # Contributing to JsPeg
 
-Thanks for your interest! JsPeg is a **pure-JavaScript, zero-dependency** JPEG
-decoder, encoder & optimizer — contributions should keep it that way.
+Thanks for your interest! JsPeg is a **pure-JavaScript, zero-dependency,
+single-license MIT** JPEG decoder, encoder & optimizer — contributions should
+keep it that way.
 
 ## Workflow
 
@@ -32,9 +33,10 @@ a change can merge.
 - The project is **MIT** and aims to stay **single-license MIT**.
 - By contributing, you agree your contribution is licensed under MIT.
 - **Do not paste code derived from non-MIT / non-public-domain sources** (BSD, IJG,
-  Apache, GPL, …) without raising it first — it changes the project's licensing.
-  Re-implementing a *documented algorithm* in your own words is fine; copying
-  source is not. Cite the spec or source for any ported logic.
+  Apache, GPL, …) without raising it first — it would change the project's
+  single-license terms. Re-implementing a *documented algorithm* in your own words
+  is fine; copying the source verbatim is not. Cite the spec or source for any
+  ported logic.
 
 ## Where things live
 
