@@ -21,7 +21,7 @@ JsPeg stays **single-license MIT** — see [the Notes](#notes).
   **arithmetic-coded** (SOF9/10) JPEG; 4:4:4 / 4:2:2 / 4:2:0 subsampling;
   grayscale / YCbCr / RGB / CMYK; applies EXIF orientation.
 - **Encode** baseline JPEG (standard or optimized Huffman tables), or **lossless**
-  (SOF3 — spatial prediction, exact round-trip).
+  (SOF3 — spatial prediction, 8–16-bit, exact round-trip).
 - **Optimize** an existing JPEG — losslessly re-code its Huffman tables, or
   transcode to **progressive** (successive approximation: renders incrementally
   *and* smaller) or **arithmetic** (SOF9); or **trellis**-quantize for extra
@@ -113,10 +113,10 @@ orientation is read from the APP1 segment and applied by `decode()` (pass
 `applyOrientation: false` to opt out). **Arithmetic coding** is fully supported by
 the clean-room QM-coder: SOF9 + SOF10 decode is validated against conformance
 vectors, and `optimize()` can also *encode* arithmetic (SOF9). **Lossless (SOF3)**
-is supported both ways — `encode({ lossless: true })` (predictors 1–7) and decode,
-cross-checked against an independent lossless decoder. 12-bit precision is not yet
-supported; the rarer differential / hierarchical frame types (SOF5/6/7/11/13–15)
-are out of scope.
+is supported both ways — `encode({ lossless: true })` (predictors 1–7, **2–16-bit
+precision**) and decode, cross-checked against an independent lossless decoder
+(including a 12-bit round-trip). 12-bit *DCT* decode is not yet supported; the rarer
+differential / hierarchical frame types (SOF5/6/7/11/13–15) are out of scope.
 
 ## License
 

@@ -36,7 +36,7 @@ RGBA → JpegBufferInputReader → colorConverter (RGB → YCbCr) + subsample
      → forward DCT (exact DCT-II) → quantize → Huffman encode → JpegWriter → bytes
 ```
 `{ lossless }` takes a separate path (`JpegLosslessEncoder`): no DCT or quantization —
-spatial prediction (T.81's 7 predictors) + Huffman of residuals, for an exact round-trip.
+spatial prediction (T.81's 7 predictors, 2–16-bit) + Huffman of residuals, for an exact round-trip.
 
 **Optimize** — `optimize()` (a pure *entropy transcode*, no pixel math)
 ```

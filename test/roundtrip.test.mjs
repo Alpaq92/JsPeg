@@ -3,7 +3,7 @@
 // No fixtures, no external tooling.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { encode, decode } from '../src/index.js';
+import { encode, decode, decodeComponents } from '../src/index.js';
 import { makeScene, SAMPLES } from '../demo/samples.js';
 
 function errorVsSource(rgba, src, w, h) {
@@ -141,4 +141,24 @@ test('lossless RGB round-trips exactly (no colour transform)', () => {
     for (let c = 0; c < 3; c++) max = Math.max(max, Math.abs(src[i * 4 + c] - img.data[i * 4 + c]));
   }
   assert.equal(max, 0, `lossless RGB (maxDiff ${max})`);
+});
+
+test('lossless 12-bit grayscale round-trips exactly', () => {
+  const w = 48;
+  const h = 40;
+  const gray = new Uint16Array(w * h); // 12-bit samples (0..4095)
+  let seed = 11;
+  const rnd = () => { seed = (seed * 1103515245 + 12345) & 0x7fffffff; return seed / 0x7fffffff; };
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      gray[y * w + x] = Math.max(0, Math.min(4095, 800 + x * 30 + 600 * Math.sin(y / 5) + 400 * (rnd() - 0.5))) | 0;
+    }
+  }
+  const jpg = encode({ width: w, height: h, data: gray, channels: 1, precision: 12 }, { lossless: true, predictor: 4 });
+  assert.ok(isLossless(jpg), 'output is SOF3 lossless');
+  const comp = decodeComponents(jpg);
+  assert.equal(comp.precision, 12, 'decoded at 12-bit precision');
+  let max = 0;
+  for (let i = 0; i < w * h; i++) max = Math.max(max, Math.abs(gray[i] - comp.components[0][i]));
+  assert.equal(max, 0, `12-bit lossless exact (maxDiff ${max})`);
 });

@@ -64,7 +64,7 @@ What JsPeg does with each Start-of-Frame type, end to end (✅ supported · ◐ 
 | **SOF0** | Baseline DCT (Huffman) | ✅ | ✅ all modes | the common case; the only accepted optimizer **input** |
 | **SOF1** | Extended sequential DCT (Huffman) | ✅ | ✅ (as baseline) | 8-bit; handled like baseline |
 | **SOF2** | Progressive DCT (Huffman) | ✅ | ✅ as **output** of `{ progressive }` | multi-scan, incremental |
-| **SOF3** | Lossless (sequential) | ✅ verified | ✅ `encode({ lossless })` | predictors 1–7; cross-checked against an independent SOF3 decoder |
+| **SOF3** | Lossless (sequential) | ✅ verified | ✅ `encode({ lossless })` | predictors 1–7, **2–16-bit** (incl. 12-bit); cross-checked against an independent SOF3 decoder |
 | **SOF5–7** | Differential sequential / progressive / lossless | ✖ | ✖ | rare; upstream lacks them too |
 | **SOF9** | Extended sequential DCT, **arithmetic** | ✅ verified | ✅ as **output** of `{ arithmetic }` | clean-room QM-coder |
 | **SOF10** | Progressive DCT, **arithmetic** | ✅ verified | ◐ internal only | QM-coder; decode validated by a minted vector |

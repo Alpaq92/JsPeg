@@ -12,8 +12,6 @@ import { JpegFrameHeader, JpegFrameComponentSpecificationParameters } from './Jp
 import { JpegScanHeader, JpegScanComponentSpecificationParameters } from './JpegScanHeader.js';
 import { JpegHuffmanEncodingTableBuilderCollection } from './JpegHuffmanEncodingTableBuilderCollection.js';
 
-const PRECISION = 8;
-
 /** Bits needed to hold a non-negative magnitude (the residual's SSSS category). */
 function bitCount(magnitude) {
   return magnitude === 0 ? 0 : 32 - Math.clz32(magnitude);
@@ -22,6 +20,16 @@ function bitCount(magnitude) {
 /** Magnitude bits for a signed residual, per RECEIVE/EXTEND. */
 function magnitudeBits(value, size) {
   return (value < 0 ? value - 1 : value) & ((1 << size) - 1);
+}
+
+/** Reduce a prediction residual modulo 2^16 into [-32768, 32767] (T.81 H.1.2.2). */
+function reduceResidual(diff) {
+  return ((diff & 0xffff) ^ 0x8000) - 0x8000;
+}
+
+/** SSSS category of a reduced residual: 0..15 ordinary, 16 ⇒ |diff| = 32768. */
+function categoryOf(residual) {
+  return residual === -32768 ? 16 : bitCount(residual < 0 ? -residual : residual);
 }
 
 /** The 7 standard predictors (T.81 H.1.2.1): ra=left, rb=above, rc=above-left. */
@@ -66,18 +74,23 @@ function extractPlanes(image) {
 
 /**
  * Encode an image as a lossless (SOF3) JPEG.
- * @param {{width:number,height:number,data:ArrayLike<number>,channels?:number,grayscale?:boolean}} image
- * @param {{predictor?:number, mostOptimalCoding?:boolean, grayscale?:boolean}} [options]
+ * @param {{width:number,height:number,data:ArrayLike<number>,channels?:number,grayscale?:boolean,precision?:number}} image
+ *   For `precision` > 8, `data` must carry the wider samples (e.g. a Uint16Array).
+ * @param {{predictor?:number, precision?:number, mostOptimalCoding?:boolean, grayscale?:boolean}} [options]
+ *   `precision` is the sample bit depth, 2..16 (default 8); T.81 Annex H.
  * @returns {Uint8Array}
  */
 export function encodeLossless(image, options = {}) {
   const predictor = options.predictor ?? 1;
   if (predictor < 1 || predictor > 7) throw new Error('Lossless predictor must be 1..7.');
 
+  const precision = options.precision ?? image.precision ?? 8;
+  if (precision < 2 || precision > 16) throw new Error('Lossless sample precision must be 2..16.');
+
   const { width, height } = image;
   const { planes, ids } = extractPlanes({ ...image, grayscale: options.grayscale ?? image.grayscale });
   const n = planes.length;
-  const initialPrediction = 1 << (PRECISION - 1);
+  const initialPrediction = 1 << (precision - 1);
 
   // Per-component state: its plane, frame id, and Huffman table id (the first
   // component gets table 0, the rest share table 1 — same convention as baseline).
@@ -102,7 +115,7 @@ export function encodeLossless(image, options = {}) {
           } else {
             prediction = predict(predictor, p[o - 1], p[o - width], p[o - width - 1]);
           }
-          fn(c.tableId, p[o] - prediction);
+          fn(c.tableId, reduceResidual(p[o] - prediction));
         }
       }
     }
@@ -112,7 +125,7 @@ export function encodeLossless(image, options = {}) {
   const builders = new JpegHuffmanEncodingTableBuilderCollection();
   for (const c of components) builders.getOrCreateTableBuilder(true, c.tableId);
   walk((tableId, residual) => {
-    builders.getOrCreateTableBuilder(true, tableId).incrementCodeCount(bitCount(residual < 0 ? -residual : residual));
+    builders.getOrCreateTableBuilder(true, tableId).incrementCodeCount(categoryOf(residual));
   });
   const tables = builders.buildTables(options.mostOptimalCoding ?? false);
 
@@ -121,7 +134,7 @@ export function encodeLossless(image, options = {}) {
   writer.writeMarker(JpegMarker.StartOfImage);
 
   const frameComponents = components.map((c) => new JpegFrameComponentSpecificationParameters(c.id, 1, 1, 0));
-  const frameHeader = new JpegFrameHeader(PRECISION, height, width, n, frameComponents);
+  const frameHeader = new JpegFrameHeader(precision, height, width, n, frameComponents);
   writer.writeMarker(JpegMarker.StartOfFrame3);
   writer.writeLength(frameHeader.bytesRequired);
   const frameBuf = new Uint8Array(frameHeader.bytesRequired);
@@ -144,11 +157,12 @@ export function encodeLossless(image, options = {}) {
   // Pass 2: emit the Huffman-coded residuals.
   writer.enterBitMode();
   walk((tableId, residual) => {
-    const size = bitCount(residual < 0 ? -residual : residual);
+    const size = categoryOf(residual);
     const table = tables.getTable(true, tableId);
     table.getCode(size);
     writer.writeBits(table.code, table.codeLength);
-    if (size > 0) writer.writeBits(magnitudeBits(residual, size), size);
+    // Categories 1..15 carry magnitude bits; 0 and the 16-bit special case (16) don't.
+    if (size > 0 && size < 16) writer.writeBits(magnitudeBits(residual, size), size);
   });
   writer.exitBitMode();
 
