@@ -1,15 +1,18 @@
-// Walk a JPEG's marker segments to find a specific APPn segment by marker byte
-// and leading signature. Shared by the EXIF-orientation and Adobe-transform
-// readers. Returns the payload span *after* the signature, or null.
+// Walk a JPEG's marker segments to find APPn segments by marker byte and leading
+// signature. Shared by the EXIF-orientation, Adobe-transform and ICC readers.
+// Returns the payload span(s) *after* the signature.
 import { JpegMarker, isRestartMarker } from './JpegMarker.js';
 
 /**
+ * Every APPn segment matching `markerByte` + `signature`, in file order — for
+ * data that may span multiple segments (e.g. an ICC profile across APP2 chunks).
  * @param {Uint8Array} data
- * @param {number} markerByte e.g. 0xE1 for APP1, 0xEE for APP14
- * @param {number[]} signature bytes that must immediately follow the length field
- * @returns {{ start: number, end: number } | null} payload range after the signature
+ * @param {number} markerByte e.g. 0xE1 for APP1, 0xE2 for APP2
+ * @param {ArrayLike<number>} signature bytes that must immediately follow the length field
+ * @returns {{ start: number, end: number }[]} payload ranges after the signature
  */
-export function findAppSegment(data, markerByte, signature) {
+export function findAppSegments(data, markerByte, signature) {
+  const segments = [];
   let offset = 2; // skip SOI
   const len = data.length;
   while (offset + 4 <= len) {
@@ -40,9 +43,15 @@ export function findAppSegment(data, markerByte, signature) {
           break;
         }
       }
-      if (match) return { start: offset + 2 + signature.length, end: offset + segLen };
+      if (match) segments.push({ start: offset + 2 + signature.length, end: offset + segLen });
     }
     offset += segLen;
   }
-  return null;
+  return segments;
+}
+
+/** The first matching APPn segment, or null. @returns {{ start: number, end: number } | null} */
+export function findAppSegment(data, markerByte, signature) {
+  const segments = findAppSegments(data, markerByte, signature);
+  return segments.length ? segments[0] : null;
 }

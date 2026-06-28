@@ -162,3 +162,30 @@ test('lossless 12-bit grayscale round-trips exactly', () => {
   for (let i = 0; i < w * h; i++) max = Math.max(max, Math.abs(gray[i] - comp.components[0][i]));
   assert.equal(max, 0, `12-bit lossless exact (maxDiff ${max})`);
 });
+
+// --- ICC colour profile embed (encode) + read (decode) -----------------------
+
+test('ICC profile embeds and reads back byte-exact (single + multi-chunk)', () => {
+  const w = 32;
+  const h = 24;
+  const src = new Uint8Array(w * h * 4);
+  for (let i = 0; i < w * h; i++) { src[i * 4] = i % 200; src[i * 4 + 1] = 100; src[i * 4 + 2] = 200 - (i % 150); src[i * 4 + 3] = 255; }
+  for (const size of [2000, 150000]) { // 1 chunk (≤65519), then multi-chunk
+    const icc = new Uint8Array(size);
+    for (let i = 0; i < size; i++) icc[i] = (i * 7 + 13) & 0xff;
+    const jpg = encode({ width: w, height: h, data: src, channels: 4 }, { quality: 85, icc });
+    const got = decodeComponents(jpg).icc;
+    assert.ok(got && got.length === size, `ICC ${size}: present with the right length`);
+    let same = true;
+    for (let i = 0; same && i < size; i++) same = got[i] === icc[i];
+    assert.ok(same, `ICC ${size}: round-trips byte-exact`);
+    assert.equal(decode(jpg).width, w, `ICC ${size}: the image still decodes`);
+  }
+});
+
+test('no ICC profile -> decodeComponents().icc is null', () => {
+  const w = 16;
+  const h = 16;
+  const src = new Uint8Array(w * h * 4).fill(128);
+  assert.equal(decodeComponents(encode({ width: w, height: h, data: src, channels: 4 }, { quality: 80 })).icc, null);
+});

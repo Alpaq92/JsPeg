@@ -21,6 +21,7 @@ export { JpegStandardHuffmanEncodingTable } from './JpegStandardHuffmanEncodingT
 export { JpegWriter } from './JpegWriter.js';
 export { JpegOptimizer } from './JpegOptimizer.js';
 export { encodeLossless } from './JpegLosslessEncoder.js';
+export { readIccProfile, iccApp2Segments } from './icc.js';
 export {
   componentsToRGBA, readAdobeTransform, rgbToYCbCrPlanes, rgbToGrayPlane, buildJfifApp0,
 } from './colorConverter.js';
@@ -34,6 +35,7 @@ import { JpegBufferInputReader } from './input/JpegBufferInputReader.js';
 import { JpegStandardQuantizationTable } from './JpegStandardQuantizationTable.js';
 import { JpegStandardHuffmanEncodingTable } from './JpegStandardHuffmanEncodingTable.js';
 import { encodeLossless } from './JpegLosslessEncoder.js';
+import { readIccProfile, iccApp2Segments } from './icc.js';
 import {
   componentsToRGBA, readAdobeTransform, rgbToYCbCrPlanes, rgbToGrayPlane, buildJfifApp0,
 } from './colorConverter.js';
@@ -83,6 +85,7 @@ export function decodeComponents(input) {
     numberOfComponents,
     componentIds,
     components: writer.components,
+    icc: readIccProfile(data),
     adobeTransform: readAdobeTransform(data),
     orientation: readExifOrientation(data),
     quality: q.ok ? q.quality : null,
@@ -151,13 +154,16 @@ const SUBSAMPLING = {
  * @param {boolean} [options.mostOptimalCoding=false] use the package-merge algorithm
  * @param {boolean} [options.grayscale] force single-component output
  * @param {boolean} [options.jfif=true] prepend a JFIF APP0 segment
+ * @param {Uint8Array} [options.icc] embed an ICC colour profile (APP2 segments)
  * @param {boolean} [options.lossless=false] encode a true-lossless (SOF3) JPEG —
  *   spatial prediction, no DCT or quantization (ignores `quality`/`subsampling`)
  * @param {number} [options.predictor=1] lossless predictor 1..7 (when `lossless`)
  * @returns {Uint8Array} the encoded JPEG
  */
 export function encode(image, options = {}) {
-  if (options.lossless) return encodeLossless(image, options);
+  if (options.lossless) {
+    return spliceAfterSoi(encodeLossless(image, options), options.icc ? iccApp2Segments(options.icc) : []);
+  }
   const { width, height } = image;
   const quality = options.quality ?? 75;
   const subsampling = options.subsampling ?? '4:2:0';
@@ -222,17 +228,27 @@ export function encode(image, options = {}) {
   }
 
   encoder.setInputReader(new JpegBufferInputReader(width, height, planes));
-  const bytes = encoder.encode();
 
-  if (jfif) {
-    const app0 = buildJfifApp0();
-    const out = new Uint8Array(bytes.length + app0.length);
-    out.set(bytes.subarray(0, 2), 0); // SOI
-    out.set(app0, 2);
-    out.set(bytes.subarray(2), 2 + app0.length);
-    return out;
+  // Splice leading segments in right after SOI: JFIF APP0, then ICC APP2 chunks.
+  const leading = [];
+  if (jfif) leading.push(buildJfifApp0());
+  if (options.icc) leading.push(...iccApp2Segments(options.icc));
+  return spliceAfterSoi(encoder.encode(), leading);
+}
+
+/** Insert whole marker segments immediately after the 2-byte SOI. */
+function spliceAfterSoi(bytes, segments) {
+  if (segments.length === 0) return bytes.slice();
+  const extra = segments.reduce((n, s) => n + s.length, 0);
+  const out = new Uint8Array(bytes.length + extra);
+  out.set(bytes.subarray(0, 2), 0); // SOI
+  let off = 2;
+  for (const seg of segments) {
+    out.set(seg, off);
+    off += seg.length;
   }
-  return bytes.slice();
+  out.set(bytes.subarray(2), off);
+  return out;
 }
 
 /**
