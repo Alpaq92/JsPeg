@@ -1,0 +1,48 @@
+# Tests
+
+The suite is **pure JavaScript** — `node --test`, no Python, no native tooling,
+no network. Fixtures are committed, so the tests run anywhere Node does.
+
+```sh
+npm test
+```
+
+73 tests across six files.
+
+## Test files (`test/`)
+
+| File | Covers |
+|---|---|
+| `decode.test.mjs` | Decode vs. frozen **libjpeg conformance vectors** — compares RGBA against a reference decode within per-fixture tolerances. Includes the SOF9 and SOF10 **arithmetic** vectors. |
+| `roundtrip.test.mjs` | Dependency-free **encode → decode** round-trips over procedural sample images (`demo/samples.js`), plus **exact lossless (SOF3)** round-trips for all 7 predictors (which also exercise the otherwise-unfixtured lossless decoder). |
+| `optimize.test.mjs` | Optimizer **losslessness** across Huffman / progressive (successive approximation) / arithmetic (SOF9) transcodes, the **lossy trellis** mode, **idempotence**, and clear errors on non-baseline input. |
+| `cmyk.test.mjs` | CMYK / YCCK (Adobe APP14) 4-component decode to RGB. |
+| `orientation.test.mjs` | All 8 **EXIF orientations** vs. the reference transform. |
+| `unit.test.mjs` | Codec units — zig-zag, math helpers, table parsing, etc. |
+
+## Fixtures (`test/fixtures/`)
+
+Each `*.jpg` is a frozen JPEG; each `*.ref` is the matching **raw RGB** decode
+(`width × height × 3` bytes) from the same reference codec; `manifest.json` lists
+dimensions and the comparison tolerances.
+
+- Generated once with **libjpeg (via Python Pillow)** so the decoder is validated
+  against a fully independent implementation — including cases no pure-JS encoder
+  here can produce. The generator is intentionally **not** in the repo; running the
+  suite needs only Node.
+- `arith_seq.jpg` is libjpeg-turbo's canonical `testimages/testimgari.jpg`
+  (SOF9 + DAC), redistributed under its permissive IJG/BSD licenses — the only way
+  to obtain an arithmetic vector (Pillow and imagecodecs can't *encode* arithmetic).
+- `.gitattributes` marks `*.jpg` / `*.ref` **binary**, so line-ending conversion
+  never corrupts them.
+
+## Tolerance philosophy
+
+Decode comparisons use a **strict mean** and a **loose max** absolute error. The
+mean is the correctness signal; the max is allowed to be larger on subsampled
+images at sharp colour edges, because JsPeg replicates chroma (nearest-neighbour,
+like the reference design) while libjpeg does "fancy" bilinear upsampling. The
+encoder is validated separately and dependency-free by the in-memory round-trips.
+
+See [ARCHITECTURE.md](ARCHITECTURE.md) for what each pipeline does, and
+`test/fixtures/README.md` for the fixture list.
