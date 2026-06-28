@@ -427,7 +427,7 @@ function bitCountOf(value) {
   return value < 0x100 ? BitCountTable[value] : 8 + BitCountTable[value >> 8];
 }
 
-function encodeBlock(writer, component, block, blockOffset) {
+export function encodeBlock(writer, component, block, blockOffset) {
   // DC
   const dcValue = block[blockOffset];
   let t = dcValue - component.dcPredictor;
@@ -474,7 +474,7 @@ function encodeHuffmanSymbol(writer, table, symbol) {
   writer.writeBits(table.code, table.codeLength);
 }
 
-function gatherBlockStatistics(component, block, blockOffset) {
+export function gatherBlockStatistics(component, block, blockOffset) {
   // DC
   const dcValue = block[blockOffset];
   const t = dcValue - component.dcPredictor;

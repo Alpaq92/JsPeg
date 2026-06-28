@@ -3,10 +3,15 @@
 A **pure-JavaScript JPEG decoder, encoder & optimizer** — no native modules, no
 WebAssembly, and **zero dependencies**. Runs anywhere, in both Node and the browser.
 
-It is a faithful port of the C# library
-**[yigolden/JpegLibrary](https://github.com/yigolden/JpegLibrary)** (MIT) with a
-bit of **[stb_image](https://github.com/nothings/stb) DNA** — its inverse DCT is
-ported from there (public domain) — so JsPeg stays single-license MIT.
+What started as a faithful port of the C# library
+**[yigolden/JpegLibrary](https://github.com/yigolden/JpegLibrary)** (MIT) grew into
+a comprehensive JPEG toolset, imbued with DNA from
+**[stb_image](https://github.com/nothings/stb)** (public-domain inverse DCT),
+**[exifr](https://github.com/MikeKovarik/exifr)** (EXIF orientation), the
+**ITU-T T.81** specification (a clean-room arithmetic coder), and
+**[Loren Merritt's x264 trellis notes](http://akuvian.org/src/x264/trellis.txt)**
+(rate-distortion trellis quantization). Every code- and spec-donor was chosen so
+JsPeg stays **single-license MIT** — see [the Notes](#notes).
 
 ### ▶ [Live demo](https://alpaq92.github.io/JsPeg/)
 
@@ -15,9 +20,12 @@ ported from there (public domain) — so JsPeg stays single-license MIT.
 - **Decode** baseline, extended-sequential, progressive, lossless, and
   **arithmetic-coded** (SOF9/10) JPEG; 4:4:4 / 4:2:2 / 4:2:0 subsampling;
   grayscale / YCbCr / RGB / CMYK; applies EXIF orientation.
-- **Encode** baseline JPEG with standard or optimized Huffman tables.
-- **Optimize** an existing JPEG — re-codes the Huffman tables losslessly
-  (identical pixels, smaller file).
+- **Encode** baseline JPEG (standard or optimized Huffman tables), or **lossless**
+  (SOF3 — spatial prediction, exact round-trip).
+- **Optimize** an existing JPEG — losslessly re-code its Huffman tables, or
+  transcode to **progressive** (successive approximation: renders incrementally
+  *and* smaller) or **arithmetic** (SOF9); or **trellis**-quantize for extra
+  savings (lossy). Lossless modes leave pixels unchanged.
 
 ## Usage
 
@@ -30,6 +38,9 @@ const { width, height, data } = decode(jpegBytes);
 // encode RGBA -> JPEG
 const jpg = encode({ width, height, data, channels: 4 }, { quality: 85, subsampling: '4:2:0' });
 
+// encode RGBA -> lossless JPEG (SOF3, exact round-trip)
+const exact = encode({ width, height, data, channels: 4 }, { lossless: true });
+
 // shrink an existing JPEG, pixels unchanged
 const smaller = optimize(jpegBytes);
 ```
@@ -41,8 +52,20 @@ const { width, height, data } = decode(new Uint8Array(await (await fetch('photo.
 canvas.getContext('2d').putImageData(new ImageData(data, width, height), 0, 0);
 ```
 
-The full class API (`JpegDecoder`, `JpegEncoder`, `JpegOptimizer`, tables, custom
-output writers, …) is exported from `src/index.js` too.
+The full class-level API (`JpegDecoder`, `JpegEncoder`, `JpegOptimizer`, tables,
+custom output writers, …) is exported from `src/index.js` too, for building your
+own pipelines.
+
+## Documentation
+
+- [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) — modules and the decode / encode /
+  optimize pipelines.
+- [docs/OPTIMIZATION.md](docs/OPTIMIZATION.md) — what `optimize()` supports (and
+  what's planned), with options.
+- [docs/TESTS.md](docs/TESTS.md) — test layout, how to run, and the conformance
+  fixtures.
+- [CONTRIBUTING.md](CONTRIBUTING.md) — how to contribute (fork → PR), and the
+  pure-JS / single-license-MIT ground rules.
 
 ## Develop
 
@@ -51,24 +74,49 @@ npm test                 # pure-JS test suite (node --test), no external tooling
 node tools/serve.mjs     # serve the demo at http://localhost:8080
 ```
 
-Tests cover decode against frozen libjpeg conformance vectors (including an
-arithmetic-coded SOF9 vector), dependency-free encode→decode round-trips over a
-set of sample images, CMYK/YCCK and EXIF-orientation handling, codec unit tests,
-and optimizer losslessness (plus its idempotence and clear errors on
-progressive/arithmetic input).
+Tests cover decode against frozen libjpeg conformance vectors (including SOF9 and
+SOF10 **arithmetic** vectors), dependency-free encode→decode round-trips over a set
+of sample images (baseline **and exact lossless SOF3**, all 7 predictors), CMYK/YCCK
+and EXIF-orientation handling, and codec unit tests.
+The optimizer is checked across all its lossless modes — Huffman re-coding,
+baseline→**progressive**, and baseline→**arithmetic** (SOF9) transcodes, each
+pixel-identical — plus the lossy **trellis** mode (valid, smaller, high-PSNR),
+idempotence, and clear errors on non-baseline input.
 
 ## Notes
 
-The inverse DCT is **[stb_image](https://github.com/nothings/stb) DNA** — ported
-from there (public domain) — so the whole project is single-license MIT; it
-tracks libjpeg's accurate IDCT closely. The forward DCT is an original exact
-transform. Subsampled chroma is upsampled by replication, like the original.
-CMYK and YCCK (Adobe APP14) 4-component images decode to RGB, and EXIF
+**Provenance & licensing.** JsPeg is **single-license MIT**, and every donor was
+chosen to keep it that way:
+
+- **[yigolden/JpegLibrary](https://github.com/yigolden/JpegLibrary)** (MIT) — the
+  bulk: every decoder (baseline, progressive, lossless, arithmetic), the baseline
+  encoder, and the optimizer. MIT → MIT.
+- **[stb_image](https://github.com/nothings/stb)** (public domain) — the inverse
+  DCT in `dct.js` (it tracks libjpeg's accurate IDCT closely). Public domain → no
+  obligation. The forward DCT is our own exact transform.
+- **[exifr](https://github.com/MikeKovarik/exifr)** (MIT) — the EXIF-orientation
+  reader in `exif.js`.
+- **ITU-T T.81** (the JPEG standard) — the **arithmetic encoder** (QM-coder, Annex D)
+  and the **lossless encoder** (predictors + residual coding, Annex H), both written
+  clean-room from the spec because no MIT implementation exists. A specification is
+  free to implement.
+- **[Loren Merritt's x264 trellis notes](http://akuvian.org/src/x264/trellis.txt)**
+  — the **trellis** rate-distortion algorithm, re-implemented from the described
+  method (algorithms/ideas aren't copyrightable, only their expression).
+
+BSD/IJG/Apache/GPL implementations (mozjpeg, libjpeg-turbo, libjpeg.NET, …) were
+deliberately **not** ported — doing so would add a second license.
+
+**Codec details.** Subsampled chroma is upsampled by replication, like the
+original. CMYK and YCCK (Adobe APP14) 4-component images decode to RGB, and EXIF
 orientation is read from the APP1 segment and applied by `decode()` (pass
-`applyOrientation: false` to opt out). **Arithmetic coding** is decoded by a
-ported QM-coder: SOF9 (sequential) is validated against a conformance vector and
-SOF10 (progressive) shares the same core. 12-bit precision and the rarer
-differential / hierarchical frame types (SOF5/6/7/11/13–15) remain out of scope.
+`applyOrientation: false` to opt out). **Arithmetic coding** is fully supported by
+the clean-room QM-coder: SOF9 + SOF10 decode is validated against conformance
+vectors, and `optimize()` can also *encode* arithmetic (SOF9). **Lossless (SOF3)**
+is supported both ways — `encode({ lossless: true })` (predictors 1–7) and decode,
+cross-checked against an independent lossless decoder. 12-bit precision is not yet
+supported; the rarer differential / hierarchical frame types (SOF5/6/7/11/13–15)
+are out of scope.
 
 ## License
 
