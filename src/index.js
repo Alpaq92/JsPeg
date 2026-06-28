@@ -102,10 +102,21 @@ export function decodeComponents(input) {
  */
 export function decode(input, options = {}) {
   const result = decodeComponents(input);
+  // Samples deeper than 8-bit (e.g. 12-bit lossless) are scaled down for the
+  // 8-bit RGBA output; `result.components` keeps the raw native-precision planes.
+  let components = result.components;
+  if (result.precision > 8) {
+    const shift = result.precision - 8;
+    components = components.map((plane) => {
+      const out = new Int16Array(plane.length);
+      for (let i = 0; i < plane.length; i++) out[i] = plane[i] >> shift;
+      return out;
+    });
+  }
   let rgba = componentsToRGBA({
     width: result.width,
     height: result.height,
-    components: result.components,
+    components,
     componentIds: result.componentIds,
     adobeTransform: result.adobeTransform,
   });
@@ -247,15 +258,11 @@ export function optimize(input, options = {}) {
   const optimizer = new JpegOptimizer();
   optimizer.mostOptimalCoding = options.mostOptimalCoding ?? false;
   optimizer.setInput(data);
-  if (options.trellis) {
-    return optimizer.optimizeTrellis(options.lambda ?? 3, options.strip ?? true);
-  }
-  if (options.arithmetic) {
-    return optimizer.optimizeArithmetic(options.strip ?? true);
-  }
-  if (options.progressive) {
-    return optimizer.optimizeProgressive(options.strip ?? true);
-  }
+  const strip = options.strip ?? true;
+  if (options.trellis) return optimizer.optimizeTrellis(options.lambda ?? 3, strip);
+  if (options.arithmetic && options.progressive) return optimizer.optimizeArithmeticProgressive(strip);
+  if (options.arithmetic) return optimizer.optimizeArithmetic(strip);
+  if (options.progressive) return optimizer.optimizeProgressive(strip);
   optimizer.scan();
-  return optimizer.optimize(options.strip ?? true);
+  return optimizer.optimize(strip);
 }
