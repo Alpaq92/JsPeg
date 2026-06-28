@@ -113,8 +113,11 @@ BSD/IJG/Apache/GPL implementations (mozjpeg, libjpeg-turbo, libjpeg.NET, …) we
 deliberately **not** ported — doing so would add a second license, breaking the
 single-license guarantee.
 
-**Codec details.** Subsampled chroma is upsampled by replication, like the
-original. CMYK and YCCK (Adobe APP14) 4-component images decode to RGB, and EXIF
+**Codec details.** Subsampled chroma is upsampled with a **fancy (bilinear)**
+filter by default — a centered-phase interpolation matching libjpeg's, so a
+subsampled decode lands within a couple of levels of the libjpeg reference (pass
+`{ fancyUpsampling: false }` for plain nearest-neighbour replication). CMYK and
+YCCK (Adobe APP14) 4-component images decode to RGB, and EXIF
 orientation is read from the APP1 segment and applied by `decode()` (pass
 `applyOrientation: false` to opt out). **Arithmetic coding** is fully supported by
 the clean-room QM-coder: SOF9 + SOF10 decode is validated against conformance

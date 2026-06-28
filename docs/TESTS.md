@@ -7,7 +7,7 @@ network. Committed fixtures let the tests run anywhere Node does.
 npm test
 ```
 
-89 tests across six files.
+90 tests across six files.
 
 ## Test files (`test/`)
 
@@ -38,11 +38,12 @@ dimensions and the comparison tolerances.
 
 ## Tolerance philosophy
 
-Decode comparisons use a **strict mean** and a **loose max** absolute error. The
-mean is the correctness signal; the max is allowed to be larger on subsampled
-images at sharp colour edges, because JsPeg replicates chroma (nearest-neighbour,
-like the reference design) while libjpeg does "fancy" bilinear upsampling. The
-encoder is validated separately and dependency-free by the in-memory round-trips.
+Decode comparisons use a **strict mean** and a **loose max** absolute error — the
+mean is the correctness signal, the max absorbs the occasional ringing spike at a
+sharp edge. Because JsPeg now upsamples subsampled chroma with the same **fancy
+(bilinear)** filter as libjpeg, even the 4:2:0 / 4:2:2 vectors decode to within a
+few levels of the reference, so their tolerances are tight (mean ≤ 1.5, max ≤ 10).
+The encoder is validated separately and dependency-free by the in-memory round-trips.
 
 See [ARCHITECTURE.md](ARCHITECTURE.md) for what each pipeline does, and
 `test/fixtures/README.md` for the fixture list.

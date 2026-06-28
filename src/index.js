@@ -40,6 +40,7 @@ import {
   componentsToRGBA, readAdobeTransform, rgbToYCbCrPlanes, rgbToGrayPlane, buildJfifApp0,
 } from './colorConverter.js';
 import { readExifOrientation, applyOrientation } from './exif.js';
+import { fancyUpsample } from './upsample.js';
 
 /** Coerce common inputs (ArrayBuffer, Buffer, typed array) to a Uint8Array. */
 function toUint8Array(data) {
@@ -85,6 +86,10 @@ export function decodeComponents(input) {
     numberOfComponents,
     componentIds,
     components: writer.components,
+    // per-component sampling, so callers can upsample subsampled chroma themselves
+    maxH: decoder.getMaximumHorizontalSampling(),
+    maxV: decoder.getMaximumVerticalSampling(),
+    componentSampling: frameHeader.components.map((c) => ({ h: c.horizontalSamplingFactor, v: c.verticalSamplingFactor })),
     icc: readIccProfile(data),
     adobeTransform: readAdobeTransform(data),
     orientation: readExifOrientation(data),
@@ -100,14 +105,27 @@ export function decodeComponents(input) {
  * (width/height are swapped for 90°/270° rotations); pass `applyOrientation:
  * false` to get the raw pixel grid. The raw EXIF value is always on `orientation`.
  * @param {Uint8Array|ArrayBuffer} input
- * @param {{ applyOrientation?: boolean }} [options]
+ * @param {{ applyOrientation?: boolean, fancyUpsampling?: boolean }} [options]
  * @returns {{ width: number, height: number, data: Uint8ClampedArray, orientation: number }}
  */
 export function decode(input, options = {}) {
   const result = decodeComponents(input);
+  let components = result.components;
+
+  // Fancy (bilinear) chroma upsampling — smooth out the nearest-neighbour
+  // replication the decoder used for subsampled components, matching libjpeg.
+  // On by default; pass { fancyUpsampling: false } for the raw replicated planes.
+  if (options.fancyUpsampling !== false && (result.maxH > 1 || result.maxV > 1)) {
+    components = components.map((plane, i) => {
+      const hSub = result.maxH / result.componentSampling[i].h;
+      const vSub = result.maxV / result.componentSampling[i].v;
+      if (hSub <= 1 && vSub <= 1) return plane;
+      return fancyUpsample(plane.slice(), result.width, result.height, hSub, vSub);
+    });
+  }
+
   // Samples deeper than 8-bit (e.g. 12-bit lossless) are scaled down for the
   // 8-bit RGBA output; `result.components` keeps the raw native-precision planes.
-  let components = result.components;
   if (result.precision > 8) {
     const shift = result.precision - 8;
     components = components.map((plane) => {

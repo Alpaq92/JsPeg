@@ -25,8 +25,8 @@ writer types) is exported too, for custom pipelines.
 bytes → JpegReader (marker scan) → JpegDecoder (dispatch DQT/DHT/DAC/DRI/SOFn/SOS/APPn)
       → createScanDecoder(SOFn) → ScanDecoder:
             entropy-decode coefficients → dequantize + un-zig-zag → inverse DCT
-            → level shift → JpegBlockOutputWriter (component planes, chroma upsample)
-      → colorConverter (YCbCr / CMYK / YCCK → RGB) → RGBA
+            → level shift → JpegBlockOutputWriter (full-resolution component planes)
+      → fancy bilinear chroma upsampling (upsample.js) → colorConverter (YCbCr / CMYK / YCCK → RGB) → RGBA
       → EXIF orientation applied (exif.js), unless { applyOrientation: false }
 ```
 
@@ -87,7 +87,7 @@ same `processScan(reader, scanHeader)` / `dispose()` lifecycle:
 | Entry / API | `index.js` |
 | Stream parsing | `JpegReader`, `JpegBitReader`, `JpegMarker`, `markerScan` |
 | Headers & tables | `JpegFrameHeader`, `JpegScanHeader`, `JpegQuantizationTable`, `JpegStandardQuantizationTable`, `JpegHuffmanDecodingTable`, `JpegArithmeticDecodingTable`, `JpegArithmeticStatistics`, `JpegElementPrecision`, `JpegZigZag` |
-| Math / transforms | `JpegMathHelper`, `dct` (stb IDCT + exact FDCT), `colorConverter` |
+| Math / transforms | `JpegMathHelper`, `dct` (stb IDCT + exact FDCT), `colorConverter`, `upsample` (fancy bilinear chroma) |
 | Decode | `JpegDecoder` + `ScanDecoder/*`; `icc` / `exif` / `colorConverter` for metadata + colour |
 | Block buffers / output | `JpegBlockAllocator`, `JpegBlockOutputWriter`, `output/JpegBufferOutputWriter`, `JpegPartialScanlineAllocator` |
 | Encode | `JpegEncoder`, `JpegLosslessEncoder`, `JpegWriter`, `JpegHuffmanEncoding*`, `JpegStandardHuffmanEncodingTable`, `JpegBlockInputReader`, `input/JpegBufferInputReader` |

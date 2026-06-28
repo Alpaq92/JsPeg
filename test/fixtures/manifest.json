@@ -75,8 +75,8 @@
     "ref": "rgb_420_q85.ref",
     "width": 96,
     "height": 64,
-    "meanTol": 5.0,
-    "maxTol": 120,
+    "meanTol": 1.5,
+    "maxTol": 10,
     "desc": "quality=85, subsampling=2"
   },
   {
@@ -85,8 +85,8 @@
     "ref": "rgb_422_q85.ref",
     "width": 96,
     "height": 64,
-    "meanTol": 5.0,
-    "maxTol": 80,
+    "meanTol": 1.5,
+    "maxTol": 10,
     "desc": "quality=85, subsampling=1"
   },
   {
@@ -105,8 +105,8 @@
     "ref": "rgb_prog_420_q80.ref",
     "width": 96,
     "height": 64,
-    "meanTol": 5.5,
-    "maxTol": 125,
+    "meanTol": 1.5,
+    "maxTol": 10,
     "desc": "quality=80, subsampling=2, progressive=True"
   },
   {
