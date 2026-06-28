@@ -170,6 +170,8 @@ const SUBSAMPLING = {
  * @param {'4:4:4'|'4:2:2'|'4:2:0'} [options.subsampling='4:2:0'] chroma subsampling
  * @param {boolean} [options.optimizeCoding=false] build image-specific Huffman tables
  * @param {boolean} [options.mostOptimalCoding=false] use the package-merge algorithm
+ * @param {boolean} [options.progressive=false] emit a progressive JPEG (SOF2, or SOF10 with `arithmetic`)
+ * @param {boolean} [options.arithmetic=false] emit an arithmetic-coded JPEG (SOF9, or SOF10 with `progressive`) — smaller, but not browser-viewable
  * @param {boolean} [options.grayscale] force single-component output
  * @param {boolean} [options.jfif=true] prepend a JFIF APP0 segment
  * @param {Uint8Array} [options.icc] embed an ICC colour profile (APP2 segments)
@@ -182,10 +184,26 @@ export function encode(image, options = {}) {
   if (options.lossless) {
     return spliceAfterSoi(encodeLossless(image, options), options.icc ? iccApp2Segments(options.icc) : []);
   }
+
+  // Native progressive / arithmetic output: encode a baseline, then transcode it
+  // (losslessly) to the requested layout. The coefficients are identical, so the
+  // result matches a direct progressive/arithmetic encode while reusing the
+  // verified scan encoders instead of duplicating them. { strip: false } keeps
+  // the JFIF / ICC segments the baseline just wrote in.
+  if (options.progressive || options.arithmetic) {
+    const baseline = encode(image, { ...options, progressive: false, arithmetic: false, optimizeCoding: false });
+    return optimize(baseline, {
+      progressive: !!options.progressive,
+      arithmetic: !!options.arithmetic,
+      mostOptimalCoding: options.mostOptimalCoding ?? false,
+      strip: false,
+    });
+  }
+
   const { width, height } = image;
   const quality = options.quality ?? 75;
   const subsampling = options.subsampling ?? '4:2:0';
-  const optimize = options.optimizeCoding ?? false;
+  const optimizeCoding = options.optimizeCoding ?? false;
   const jfif = options.jfif ?? true;
   const grayscale = options.grayscale
     ?? (image.channels === 1 || (Array.isArray(image.components) && image.components.length === 1));
@@ -204,7 +222,7 @@ export function encode(image, options = {}) {
   }
 
   // Huffman tables: standard, or builders (for optimized coding).
-  if (optimize) {
+  if (optimizeCoding) {
     encoder.setHuffmanTable(true, 0, null);
     encoder.setHuffmanTable(false, 0, null);
     if (!grayscale) {

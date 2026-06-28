@@ -12,7 +12,7 @@ the EXIF-orientation reader adapted from [exifr](https://github.com/MikeKovarik/
 |---|---|
 | `decode(bytes, opts?)` | JPEG → `{ width, height, data }` (RGBA `Uint8ClampedArray`) |
 | `decodeComponents(bytes)` | JPEG → raw component planes (no colour conversion) |
-| `encode({ width, height, data }, opts?)` | RGBA → baseline JPEG bytes (or lossless SOF3 with `{ lossless }`) |
+| `encode({ width, height, data }, opts?)` | RGBA → JPEG bytes — baseline, **progressive** / **arithmetic** (`{ progressive }` / `{ arithmetic }`), or lossless SOF3 (`{ lossless }`) |
 | `optimize(bytes, opts?)` | JPEG → smaller JPEG, pixels unchanged (see [OPTIMIZATION.md](OPTIMIZATION.md)) |
 
 The class-level API (`JpegDecoder`, `JpegEncoder`, `JpegOptimizer`, the table and
@@ -35,6 +35,10 @@ bytes → JpegReader (marker scan) → JpegDecoder (dispatch DQT/DHT/DAC/DRI/SOF
 RGBA → JpegBufferInputReader → colorConverter (RGB → YCbCr) + subsample
      → forward DCT (exact DCT-II) → quantize → Huffman encode → JpegWriter → bytes
 ```
+`{ progressive }` / `{ arithmetic }` encode a baseline and then transcode it
+(losslessly, via `optimize()`) to SOF2 / SOF9 / SOF10 — the coefficients are
+identical, so the result matches a direct progressive/arithmetic encode.
+
 `{ lossless }` takes a separate path (`JpegLosslessEncoder`): no DCT or quantization —
 spatial prediction (T.81's 7 predictors, 2–16-bit) + Huffman of residuals, for an exact round-trip.
 

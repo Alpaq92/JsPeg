@@ -166,6 +166,49 @@ test('lossless 12-bit grayscale round-trips exactly', () => {
   assert.equal(max, 0, `12-bit lossless exact (maxDiff ${max})`);
 });
 
+// --- native progressive / arithmetic encode from pixels ----------------------
+// encode({ progressive }) / { arithmetic } emit the requested frame type
+// straight from pixels (internally: a baseline encode + a lossless transcode),
+// so the decoded pixels are identical to a plain baseline encode.
+function frameType(bytes) {
+  for (let i = 2; i + 1 < bytes.length; i++) {
+    if (bytes[i] === 0xff) {
+      const m = bytes[i + 1];
+      if (m >= 0xc0 && m <= 0xcf && m !== 0xc4 && m !== 0xc8) return m; // an SOFn
+    }
+  }
+  return 0;
+}
+
+test('native progressive / arithmetic encode from pixels (right frame type, pixel-identical)', () => {
+  const opts = { quality: 85, subsampling: '4:2:0' };
+  const baseline = decode(encode({ width: W, height: H, data: source, channels: 4 }, opts)).data;
+  for (const [extra, sof] of [
+    [{ progressive: true }, 0xc2], // SOF2
+    [{ arithmetic: true }, 0xc9], // SOF9
+    [{ arithmetic: true, progressive: true }, 0xca], // SOF10
+  ]) {
+    const out = encode({ width: W, height: H, data: source, channels: 4 }, { ...opts, ...extra });
+    assert.equal(frameType(out), sof, `frame type 0x${sof.toString(16)}`);
+    const back = decode(out).data;
+    let max = 0;
+    for (let i = 0; i < back.length; i++) max = Math.max(max, Math.abs(back[i] - baseline[i]));
+    assert.equal(max, 0, `${JSON.stringify(extra)}: pixel-identical to the baseline encode`);
+  }
+});
+
+test('native progressive encode preserves an embedded ICC profile', () => {
+  const icc = new Uint8Array(1800);
+  for (let i = 0; i < icc.length; i++) icc[i] = (i * 7 + 3) & 0xff;
+  const prog = encode({ width: W, height: H, data: source, channels: 4 }, { quality: 85, progressive: true, icc });
+  assert.equal(frameType(prog), 0xc2, 'SOF2 progressive');
+  const back = decodeComponents(prog).icc;
+  assert.ok(back && back.length === icc.length, 'ICC present, right length');
+  let same = true;
+  for (let i = 0; i < icc.length; i++) if (back[i] !== icc[i]) { same = false; break; }
+  assert.ok(same, 'ICC bytes preserved through the transcode');
+});
+
 // --- ICC colour profile embed (encode) + read (decode) -----------------------
 
 test('ICC profile embeds and reads back byte-exact (single + multi-chunk)', () => {
