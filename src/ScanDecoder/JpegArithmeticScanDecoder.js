@@ -60,7 +60,7 @@ const QE_ROWS = [
   [0x5a1d, 113, 113, 0],
 ];
 
-const QE_TABLE = Int32Array.from(QE_ROWS, ([qe, nlps, nmps, sw]) => (qe << 16) | (nmps << 8) | (sw << 7) | nlps);
+export const QE_TABLE = Int32Array.from(QE_ROWS, ([qe, nlps, nmps, sw]) => (qe << 16) | (nmps << 8) | (sw << 7) | nlps);
 
 export class JpegArithmeticScanDecoder {
   constructor(decoder) {

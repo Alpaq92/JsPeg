@@ -17,10 +17,14 @@ The fixtures cover:
 - grayscale baseline (q50/q90) and progressive (q88), plus an odd-sized image
 - RGB 4:4:4 baseline (q75/q92) and progressive (q88), plus an odd-sized image
 - RGB 4:2:0 and 4:2:2 baseline, and 4:2:0 progressive
-- `arith_seq.jpg` — SOF9 **arithmetic-coded** (no available encoder here can
-  produce arithmetic coding). This is libjpeg-turbo's canonical
-  `testimages/testimgari.jpg`, redistributed under its permissive IJG/BSD
-  licenses; its `.ref` was produced by the same libjpeg decoder via Pillow.
+- `arith_seq.jpg` — SOF9 **sequential arithmetic-coded**. This is libjpeg-turbo's
+  canonical `testimages/testimgari.jpg`, redistributed under its permissive
+  IJG/BSD licenses; its `.ref` was produced by the same libjpeg decoder via Pillow.
+- `arith_prog.jpg` — SOF10 **progressive arithmetic-coded**, minted by JsPeg's own
+  arithmetic encoder and **validated by libjpeg (Pillow), which decodes it
+  identically**; its `.ref` is that libjpeg decode. It exists because no
+  third-party SOF10 vector was available — the independent libjpeg agreement is
+  what makes it a valid conformance test for the decoder.
 
 Because these are frozen vectors, they should be treated as read-only. The
 encoder is validated separately and dependency-free by the in-memory

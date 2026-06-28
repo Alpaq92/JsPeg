@@ -95,3 +95,50 @@ test('optimized coding is smaller than or equal to standard coding', () => {
   const opt = encode({ width: W, height: H, data: source, channels: 4 }, { quality: 80, subsampling: '4:2:0', optimizeCoding: true });
   assert.ok(opt.length <= std.length, `optimized (${opt.length}) <= standard (${std.length})`);
 });
+
+// --- lossless (SOF3) encode: must be bit-exact through the decoder ------------
+// This also exercises the lossless decoder, which has no conformance fixture
+// (no other tool here can produce a lossless JPEG to mint one from).
+function isLossless(data) {
+  for (let i = 0; i + 1 < data.length; i++) {
+    if (data[i] === 0xff && data[i + 1] === 0xc3) return true;
+  }
+  return false;
+}
+
+test('lossless grayscale round-trips exactly for all 7 predictors', () => {
+  const w = 70;
+  const h = 47; // odd dimensions
+  const gray = new Uint8Array(w * h);
+  let seed = 3;
+  const rnd = () => { seed = (seed * 1103515245 + 12345) & 0x7fffffff; return seed / 0x7fffffff; };
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      gray[y * w + x] = Math.max(0, Math.min(255, 50 + x + 40 * Math.sin(y / 6) + 30 * (rnd() - 0.5))) | 0;
+    }
+  }
+  for (let predictor = 1; predictor <= 7; predictor++) {
+    const jpg = encode({ width: w, height: h, data: gray, channels: 1 }, { lossless: true, predictor });
+    assert.ok(isLossless(jpg), `predictor ${predictor}: output is SOF3 lossless`);
+    const img = decode(jpg);
+    assert.equal(img.width, w);
+    assert.equal(img.height, h);
+    let max = 0;
+    for (let i = 0; i < w * h; i++) max = Math.max(max, Math.abs(gray[i] - img.data[i * 4]));
+    assert.equal(max, 0, `predictor ${predictor}: lossless (maxDiff ${max})`);
+  }
+});
+
+test('lossless RGB round-trips exactly (no colour transform)', () => {
+  const w = 64;
+  const h = 48;
+  const src = makeScene(w, h);
+  const jpg = encode({ width: w, height: h, data: src, channels: 4 }, { lossless: true, predictor: 4 });
+  assert.ok(isLossless(jpg), 'output is SOF3 lossless');
+  const img = decode(jpg);
+  let max = 0;
+  for (let i = 0; i < w * h; i++) {
+    for (let c = 0; c < 3; c++) max = Math.max(max, Math.abs(src[i * 4 + c] - img.data[i * 4 + c]));
+  }
+  assert.equal(max, 0, `lossless RGB (maxDiff ${max})`);
+});

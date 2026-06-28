@@ -20,6 +20,7 @@ export { JpegHuffmanEncodingTableBuilder } from './JpegHuffmanEncodingTableBuild
 export { JpegStandardHuffmanEncodingTable } from './JpegStandardHuffmanEncodingTable.js';
 export { JpegWriter } from './JpegWriter.js';
 export { JpegOptimizer } from './JpegOptimizer.js';
+export { encodeLossless } from './JpegLosslessEncoder.js';
 export {
   componentsToRGBA, readAdobeTransform, rgbToYCbCrPlanes, rgbToGrayPlane, buildJfifApp0,
 } from './colorConverter.js';
@@ -32,6 +33,7 @@ import { JpegBufferOutputWriter } from './output/JpegBufferOutputWriter.js';
 import { JpegBufferInputReader } from './input/JpegBufferInputReader.js';
 import { JpegStandardQuantizationTable } from './JpegStandardQuantizationTable.js';
 import { JpegStandardHuffmanEncodingTable } from './JpegStandardHuffmanEncodingTable.js';
+import { encodeLossless } from './JpegLosslessEncoder.js';
 import {
   componentsToRGBA, readAdobeTransform, rgbToYCbCrPlanes, rgbToGrayPlane, buildJfifApp0,
 } from './colorConverter.js';
@@ -138,9 +140,13 @@ const SUBSAMPLING = {
  * @param {boolean} [options.mostOptimalCoding=false] use the package-merge algorithm
  * @param {boolean} [options.grayscale] force single-component output
  * @param {boolean} [options.jfif=true] prepend a JFIF APP0 segment
+ * @param {boolean} [options.lossless=false] encode a true-lossless (SOF3) JPEG —
+ *   spatial prediction, no DCT or quantization (ignores `quality`/`subsampling`)
+ * @param {number} [options.predictor=1] lossless predictor 1..7 (when `lossless`)
  * @returns {Uint8Array} the encoded JPEG
  */
 export function encode(image, options = {}) {
+  if (options.lossless) return encodeLossless(image, options);
   const { width, height } = image;
   const quality = options.quality ?? 75;
   const subsampling = options.subsampling ?? '4:2:0';
@@ -225,6 +231,15 @@ export function encode(image, options = {}) {
  * @param {object} [options]
  * @param {boolean} [options.strip=true] drop non-essential metadata segments
  * @param {boolean} [options.mostOptimalCoding=false] use the package-merge algorithm
+ * @param {boolean} [options.progressive=false] transcode to progressive (renders
+ *   incrementally); lossless, baseline input only
+ * @param {boolean} [options.arithmetic=false] transcode to arithmetic coding
+ *   (SOF9) — smaller, but **browsers cannot display arithmetic JPEGs**; lossless,
+ *   baseline input only
+ * @param {boolean} [options.trellis=false] **lossy** rate-distortion AC
+ *   thresholding (smaller at a small quality cost); baseline input only
+ * @param {number} [options.lambda=3] trellis rate-distortion constant — higher
+ *   is smaller/lossier (the size gain also grows with the source's quality)
  * @returns {Uint8Array} the optimized JPEG
  */
 export function optimize(input, options = {}) {
@@ -232,6 +247,15 @@ export function optimize(input, options = {}) {
   const optimizer = new JpegOptimizer();
   optimizer.mostOptimalCoding = options.mostOptimalCoding ?? false;
   optimizer.setInput(data);
+  if (options.trellis) {
+    return optimizer.optimizeTrellis(options.lambda ?? 3, options.strip ?? true);
+  }
+  if (options.arithmetic) {
+    return optimizer.optimizeArithmetic(options.strip ?? true);
+  }
+  if (options.progressive) {
+    return optimizer.optimizeProgressive(options.strip ?? true);
+  }
   optimizer.scan();
   return optimizer.optimize(options.strip ?? true);
 }

@@ -119,5 +119,16 @@
     "maxTol": 36,
     "desc": "SOF9 arithmetic-coded",
     "credit": "libjpeg-turbo testimages/testimgari.jpg (IJG/BSD licenses)"
+  },
+  {
+    "name": "arith_prog",
+    "file": "arith_prog.jpg",
+    "ref": "arith_prog.ref",
+    "width": 96,
+    "height": 64,
+    "meanTol": 1.5,
+    "maxTol": 8,
+    "desc": "SOF10 progressive arithmetic-coded",
+    "credit": "minted by JsPeg's arithmetic encoder; validated by libjpeg (Pillow), which decodes it identically"
   }
 ]
