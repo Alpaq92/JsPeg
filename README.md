@@ -96,10 +96,10 @@ chosen to keep it that way:
   obligation. The forward DCT is our own exact transform.
 - **[exifr](https://github.com/MikeKovarik/exifr)** (MIT) — the EXIF-orientation
   reader in `exif.js`.
-- **ITU-T T.81** (the JPEG standard) — the **arithmetic encoder** (QM-coder, Annex D)
-  and the **lossless encoder** (predictors + residual coding, Annex H), both written
-  clean-room from the spec because no MIT implementation exists. A specification is
-  free to implement.
+- **[ITU-T T.81](https://www.w3.org/Graphics/JPEG/itu-t81.pdf)** (the JPEG standard)
+  — the **arithmetic encoder** (QM-coder, Annex D) and the **lossless encoder**
+  (predictors + residual coding, Annex H), both written clean-room from the spec
+  because no MIT implementation exists. A specification is free to implement.
 - **[Loren Merritt's x264 trellis notes](http://akuvian.org/src/x264/trellis.txt)**
   — the **trellis** rate-distortion algorithm, re-implemented from the described
   method (algorithms/ideas aren't copyrightable, only their expression).
