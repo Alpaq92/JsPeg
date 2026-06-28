@@ -1,7 +1,7 @@
 # Tests
 
-The suite is **pure JavaScript** — `node --test`, no Python, no native tooling,
-no network. Fixtures are committed, so the tests run anywhere Node does.
+The suite is **pure JavaScript** — `node --test`, no Python, native tooling, or
+network. Committed fixtures let the tests run anywhere Node does.
 
 ```sh
 npm test

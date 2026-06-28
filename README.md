@@ -105,7 +105,8 @@ chosen to keep it that way:
   method (algorithms/ideas aren't copyrightable, only their expression).
 
 BSD/IJG/Apache/GPL implementations (mozjpeg, libjpeg-turbo, libjpeg.NET, …) were
-deliberately **not** ported — doing so would add a second license.
+deliberately **not** ported — doing so would add a second license, breaking the
+single-license guarantee.
 
 **Codec details.** Subsampled chroma is upsampled by replication, like the
 original. CMYK and YCCK (Adobe APP14) 4-component images decode to RGB, and EXIF
