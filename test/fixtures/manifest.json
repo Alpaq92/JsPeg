@@ -130,5 +130,16 @@
     "maxTol": 8,
     "desc": "SOF10 progressive arithmetic-coded",
     "credit": "minted by JsPeg's arithmetic encoder; validated by libjpeg (Pillow), which decodes it identically"
+  },
+  {
+    "name": "dct12_444",
+    "file": "dct12_444.jpg",
+    "ref": "dct12_444.ref",
+    "width": 80,
+    "height": 56,
+    "meanTol": 2.5,
+    "maxTol": 12,
+    "desc": "SOF1 extended-sequential, 12-bit precision (4:4:4)",
+    "credit": "minted by imagecodecs (libjpeg-turbo 12-bit); reference scaled to 8-bit RGB"
   }
 ]
