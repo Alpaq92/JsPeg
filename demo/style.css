@@ -218,6 +218,33 @@ output { color: var(--text); font-variant-numeric: tabular-nums; min-width: 2ch;
 .opt-table td.warn { color: var(--accent); font-weight: 600; }
 .opt-table .dl-icon { display: inline-flex; align-items: center; color: var(--accent-2); text-decoration: none; }
 .opt-table .dl-icon:hover { color: var(--accent); }
+.info-glyph { color: inherit; cursor: help; margin-right: 0.3em; position: relative; }
+.info-glyph svg { vertical-align: -0.18em; }
+.info-glyph .tip {
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 8px);
+  transform: translateX(-50%);
+  width: max-content;
+  max-width: 240px;
+  white-space: normal;
+  text-transform: none;
+  font-weight: 400;
+  font-size: 0.8rem;
+  line-height: 1.45;
+  color: var(--text);
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.5rem 0.65rem;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.45);
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.12s ease;
+  pointer-events: none;
+  z-index: 10;
+}
+.info-glyph:hover .tip { opacity: 1; visibility: visible; }
 
 footer {
   text-align: center;
