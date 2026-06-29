@@ -8,8 +8,9 @@ the EXIF-orientation reader adapted from [exifr](https://github.com/MikeKovarik/
 
 ## Code provenance
 
-Roughly where the ~7.4k lines come from (by code line, blanks/comments excluded —
-the split is approximate, since a few files mix ported and original code):
+Roughly where the project's ~7.4k lines come from (measured by code line, with
+blanks/comments excluded — the split is approximate, since a few files mix both
+ported and original code):
 
 ```mermaid
 %%{init: {'theme': 'base', 'themeVariables': {'pie1': '#4c6ef5', 'pie2': '#40c057', 'pie3': '#be4bdb', 'pie4': '#fd7e14', 'pieSectionTextColor': '#ffffff', 'pieTitleTextColor': '#868e96', 'pieLegendTextColor': '#868e96'}}}%%
