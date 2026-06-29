@@ -370,12 +370,29 @@ $('quality').addEventListener('input', () => { $('qVal').textContent = $('qualit
 $('encodeBtn').addEventListener('click', doEncode);
 $('optimizeBtn').addEventListener('click', doOptimize);
 
-// build the "try a sample" chips
-for (const sample of SAMPLES) {
+// The icon itself, served as a real JsPeg-encoded JPG — decoding it here dogfoods
+// the decoder (and shows it round-tripping the encoder's own output).
+async function loadIconJpeg() {
+  setStatus('Loading the icon.jpg sample…');
+  try {
+    const bytes = new Uint8Array(await (await fetch('assets/icon.jpg')).arrayBuffer());
+    await showJpeg(bytes);
+    panels.hidden = false;
+    autoEncode();
+  } catch (err) {
+    console.error(err);
+    setStatus(`Could not load the icon sample: ${err.message}`, true);
+  }
+}
+
+// build the "try a sample" chips (procedural samples, plus the icon JPG)
+function addChip(label, onClick) {
   const btn = document.createElement('button');
   btn.type = 'button';
   btn.className = 'chip';
-  btn.textContent = sample.name;
-  btn.addEventListener('click', () => loadSample(sample));
+  btn.textContent = label;
+  btn.addEventListener('click', onClick);
   $('samples').append(btn);
 }
+for (const sample of SAMPLES) addChip(sample.name, () => loadSample(sample));
+addChip('Icon (JPG)', loadIconJpeg);
