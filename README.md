@@ -1,5 +1,7 @@
 # JsPeg
 
+<img src="assets/icon.png" align="right" width="110" alt="JsPeg icon" />
+
 A **pure-JavaScript JPEG decoder, encoder & optimizer** — no native modules, no
 WebAssembly, and **zero dependencies**. Runs anywhere, in both Node and the browser.
 
@@ -12,6 +14,11 @@ a comprehensive JPEG toolset, imbued with DNA from
 **[Loren Merritt's x264 trellis notes](http://akuvian.org/src/x264/trellis.txt)**
 (rate-distortion trellis quantization). Every code- and spec-donor was chosen so
 JsPeg stays **single-license MIT** — see [the Notes](#notes).
+
+The project icon (`assets/icon.svg`, `assets/icon.png`) is a
+[Tabler](https://tabler.io/icons) photo glyph (MIT) recoloured in
+[Open Color](https://yeun.github.io/open-color/) **Yellow** — the same palette
+that fills the [provenance chart](docs/ARCHITECTURE.md#code-provenance).
 
 ### ▶ [Live demo](https://alpaq92.github.io/JsPeg/)
 
