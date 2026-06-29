@@ -247,3 +247,14 @@ test('12-bit DCT encode emits SOF1 and round-trips near-losslessly', () => {
   for (let i = 0; i < w * h; i++) sum += Math.abs(gray[i] - c.components[0][i]);
   assert.ok(sum / (w * h) < 4, `12-bit DCT round-trip mean ${(sum / (w * h)).toFixed(1)} of 4095 at q92`);
 });
+
+test('DCT encode rejects unsupported precision (only 8 or 12)', () => {
+  const gray = new Uint16Array(64);
+  for (const p of [0, 7, 10, 13, 16]) {
+    assert.throws(
+      () => encode({ width: 8, height: 8, components: [gray], precision: p }, {}),
+      /precision must be 8 or 12/,
+      `precision ${p} should be rejected`,
+    );
+  }
+});

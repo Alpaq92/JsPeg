@@ -29,7 +29,7 @@ export class JpegEncoder {
     this._encodeComponents = null;
     /** True to use the package-merge optimal Huffman algorithm. */
     this.mostOptimalCoding = false;
-    /** Sample precision in bits — 8 emits SOF0 (baseline); 9..12 emits SOF1. */
+    /** Sample precision in bits — 8 emits SOF0 (baseline); 12 emits SOF1. */
     this.precision = 8;
   }
 
@@ -158,6 +158,9 @@ export class JpegEncoder {
   }
 
   _writeStartOfFrame(writer) {
+    if (this.precision !== 8 && this.precision !== 12) {
+      throw new RangeError('Sample precision must be 8 or 12 for a DCT frame.');
+    }
     const input = this._input;
     if (input == null) throw new Error('Input is not specified.');
     const encodeComponents = this._encodeComponents;

@@ -43,9 +43,10 @@ const GPS_TAGS = {
 
 /** Reader over the TIFF block with a fixed byte order. */
 class Tiff {
-  constructor(data, base, little) {
+  constructor(data, base, end, little) {
     this.d = data;
     this.base = base; // file offset of the TIFF header (byte-order mark)
+    this.end = end; // end of the Exif APP1 payload — every offset must stay inside it
     this.le = little;
   }
   u16(p) {
@@ -89,20 +90,20 @@ function decodeValue(t, type, count, p) {
 
 function readIfd(t, ifdOffset, tagNames) {
   const p0 = t.base + ifdOffset;
-  if (p0 + 2 > t.d.length) return { tags: {}, next: 0 };
+  if (p0 < t.base || p0 + 2 > t.end) return { tags: {}, next: 0 };
   const count = t.u16(p0);
   const tags = {};
   let p = p0 + 2;
-  for (let i = 0; i < count && p + 12 <= t.d.length; i++, p += 12) {
+  for (let i = 0; i < count && p + 12 <= t.end; i++, p += 12) {
     const tag = t.u16(p);
     const type = t.u16(p + 2);
     const cnt = t.u32(p + 4);
     const size = (TYPE_SIZE[type] || 1) * cnt;
     const valuePos = size <= 4 ? p + 8 : t.base + t.u32(p + 8);
-    if (valuePos < 0 || valuePos + size > t.d.length) continue;
+    if (valuePos < t.base || valuePos + size > t.end) continue; // stay within the APP1 segment
     tags[tagNames[tag] || `0x${tag.toString(16).padStart(4, '0')}`] = decodeValue(t, type, cnt, valuePos);
   }
-  const next = p + 4 <= t.d.length ? t.u32(p) : 0;
+  const next = p + 4 <= t.end ? t.u32(p) : 0;
   return { tags, next };
 }
 
@@ -114,7 +115,7 @@ function exifTiff(data) {
   if (base + 8 > data.length) return null;
   const bom = (data[base] << 8) | data[base + 1];
   if (bom !== 0x4949 && bom !== 0x4d4d) return null; // "II" little / "MM" big
-  return new Tiff(data, base, bom === 0x4949);
+  return new Tiff(data, base, seg.end, bom === 0x4949);
 }
 
 // Parse the Exif TIFF header + IFD0 once; the photo/gps IFDs and the thumbnail
@@ -139,7 +140,7 @@ function exifThumbnail({ t, ifd0 }, data) {
   const len = ifd1.tags.JPEGInterchangeFormatLength;
   if (!off || !len) return null;
   const start = t.base + off;
-  if (start < 0 || start + len > data.length) return null;
+  if (start < t.base || start + len > t.end) return null; // thumbnail lives inside the APP1 segment
   return data.subarray(start, start + len);
 }
 
@@ -161,9 +162,7 @@ export function readThumbnail(data) {
 export function readXmp(data) {
   const seg = findAppSegment(data, 0xe1, XMP_SIG);
   if (!seg) return null;
-  let s = '';
-  for (let i = seg.start; i < seg.end; i++) s += String.fromCharCode(data[i]);
-  return s;
+  return new TextDecoder().decode(data.subarray(seg.start, seg.end)); // XMP packets are UTF-8
 }
 
 // --- IPTC (APP13 Photoshop Image Resource Blocks) ----------------------------

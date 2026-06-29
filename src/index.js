@@ -221,7 +221,10 @@ export function encode(image, options = {}) {
   const { width, height } = image;
   const quality = options.quality ?? 75;
   const subsampling = options.subsampling ?? '4:2:0';
-  const precision = image.precision ?? 8; // 9..12 emits a 12-bit-capable SOF1 DCT frame
+  const precision = image.precision ?? 8; // 8 → SOF0; 12 → a 12-bit SOF1 DCT frame
+  if (precision !== 8 && precision !== 12) {
+    throw new RangeError('DCT precision must be 8 or 12 (use { lossless } for other bit depths).');
+  }
   // >8-bit DCT has no standard Huffman tables (categories run past 11), so the
   // image's own optimal tables are mandatory.
   const optimizeCoding = (options.optimizeCoding ?? false) || precision > 8;

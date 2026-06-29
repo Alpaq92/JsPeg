@@ -5,7 +5,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { readMetadata, decodeComponents } from '../src/index.js';
+import { readMetadata, decodeComponents, readXmp } from '../src/index.js';
 
 const jpg = new Uint8Array(readFileSync(new URL('./fixtures/meta.jpg', import.meta.url)));
 const m = readMetadata(jpg);
@@ -43,6 +43,16 @@ test('decodeComponents().metadata exposes the same, parsed lazily on access', ()
   const c = decodeComponents(jpg);
   assert.equal(c.metadata.exif.image.Make, 'JsPegCam');
   assert.equal(c.metadata.iptc['By-line'], 'Jane Doe');
+});
+
+test('XMP is decoded as UTF-8 (multibyte-safe)', () => {
+  const sig = [...'http://ns.adobe.com/xap/1.0/\0'].map((c) => c.charCodeAt(0));
+  const xml = '<x:xmpmeta><dc:title>café — δ</dc:title></x:xmpmeta>'; // é, em-dash, δ are multibyte
+  const payload = new TextEncoder().encode(xml);
+  const len = 2 + sig.length + payload.length;
+  const seg = [0xff, 0xe1, (len >> 8) & 0xff, len & 0xff, ...sig, ...payload];
+  const jpg2 = new Uint8Array([0xff, 0xd8, ...seg, 0xff, 0xd9]);
+  assert.equal(readXmp(jpg2), xml); // byte-by-byte String.fromCharCode would have mangled this
 });
 
 test('a JPEG with no metadata yields all-null (no throw)', () => {

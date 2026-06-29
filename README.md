@@ -137,7 +137,7 @@ progressive) **and encodes** (`encode({ precision: 12 })` → SOF1, grayscale) �
 cross-checked against libjpeg-turbo. Rich **metadata** is read on decode — **EXIF**
 tags + the embedded thumbnail, **XMP** and **IPTC** via `decodeComponents().metadata`
 (or the standalone `readMetadata()`), plus **ICC** profiles via `.icc` — and ICC can
-be embedded on encode (`encode({ icc })`). The
+be embedded on encode (`encode(image, { icc })`). The
 differential / hierarchical frame types (SOF5–7 / SOF13–15) are out of scope:
 they exist only inside hierarchical mode (T.81 Annex J), which even libjpeg never
 implemented — so there is no reference decoder to verify an implementation against.
