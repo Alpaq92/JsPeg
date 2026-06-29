@@ -395,4 +395,4 @@ function addChip(label, onClick) {
   $('samples').append(btn);
 }
 for (const sample of SAMPLES) addChip(sample.name, () => loadSample(sample));
-addChip('Icon (JPG)', loadIconJpeg);
+addChip('Icon', loadIconJpeg);
