@@ -22,6 +22,7 @@ export { JpegWriter } from './JpegWriter.js';
 export { JpegOptimizer } from './JpegOptimizer.js';
 export { encodeLossless } from './JpegLosslessEncoder.js';
 export { readIccProfile, iccApp2Segments } from './icc.js';
+export { readMetadata, readExif, readThumbnail, readJfifThumbnail, readXmp, readIptc } from './metadata.js';
 export {
   componentsToRGBA, readAdobeTransform, rgbToYCbCrPlanes, rgbToGrayPlane, buildJfifApp0,
 } from './colorConverter.js';
@@ -41,6 +42,7 @@ import {
 } from './colorConverter.js';
 import { readExifOrientation, applyOrientation } from './exif.js';
 import { fancyUpsample } from './upsample.js';
+import { readMetadata } from './metadata.js';
 
 /** Coerce common inputs (ArrayBuffer, Buffer, typed array) to a Uint8Array. */
 function toUint8Array(data) {
@@ -48,6 +50,21 @@ function toUint8Array(data) {
   if (data instanceof ArrayBuffer) return new Uint8Array(data);
   if (ArrayBuffer.isView(data)) return new Uint8Array(data.buffer, data.byteOffset, data.byteLength);
   throw new TypeError('Expected a Uint8Array, ArrayBuffer or typed array.');
+}
+
+// Attach `.metadata` as a lazily-parsed, memoized, NON-enumerable getter: parsing
+// EXIF/XMP/IPTC never runs on a pixel-only decode, and (being non-enumerable) an
+// object spread doesn't trigger it. Access `result.metadata` to parse on demand.
+function lazyMetadata(obj, data) {
+  Object.defineProperty(obj, 'metadata', {
+    configurable: true,
+    get() {
+      const m = readMetadata(data);
+      Object.defineProperty(obj, 'metadata', { value: m, configurable: true });
+      return m;
+    },
+  });
+  return obj;
 }
 
 /**
@@ -79,7 +96,7 @@ export function decodeComponents(input) {
   const componentIds = frameHeader.components.map((c) => c.identifier);
   const q = decoder.tryEstimateQuality();
 
-  return {
+  const result = {
     width,
     height,
     precision: decoder.precision,
@@ -97,6 +114,7 @@ export function decodeComponents(input) {
     progressive: decoder.startOfFrame === 0xc2,
     startOfFrame: decoder.startOfFrame,
   };
+  return lazyMetadata(result, data); // { exif, thumbnail, xmp, iptc }, parsed on access
 }
 
 /**
@@ -149,7 +167,7 @@ export function decode(input, options = {}) {
     width = oriented.width;
     height = oriented.height;
   }
-  return { ...result, width, height, data: rgba };
+  return lazyMetadata({ ...result, width, height, data: rgba }, toUint8Array(input));
 }
 
 const SUBSAMPLING = {
@@ -203,13 +221,20 @@ export function encode(image, options = {}) {
   const { width, height } = image;
   const quality = options.quality ?? 75;
   const subsampling = options.subsampling ?? '4:2:0';
-  const optimizeCoding = options.optimizeCoding ?? false;
+  const precision = image.precision ?? 8; // 8 → SOF0; 12 → a 12-bit SOF1 DCT frame
+  if (precision !== 8 && precision !== 12) {
+    throw new RangeError('DCT precision must be 8 or 12 (use { lossless } for other bit depths).');
+  }
+  // >8-bit DCT has no standard Huffman tables (categories run past 11), so the
+  // image's own optimal tables are mandatory.
+  const optimizeCoding = (options.optimizeCoding ?? false) || precision > 8;
   const jfif = options.jfif ?? true;
   const grayscale = options.grayscale
     ?? (image.channels === 1 || (Array.isArray(image.components) && image.components.length === 1));
 
   const encoder = new JpegEncoder();
   encoder.mostOptimalCoding = options.mostOptimalCoding ?? false;
+  encoder.precision = precision;
 
   // Quantization tables (scaled to the requested quality).
   encoder.setQuantizationTable(

@@ -226,3 +226,58 @@ test('no ICC profile -> decodeComponents().icc is null', () => {
   const src = new Uint8Array(w * h * 4).fill(128);
   assert.equal(decodeComponents(encode({ width: w, height: h, data: src, channels: 4 }, { quality: 80 })).icc, null);
 });
+
+// 12-bit DCT encode: { precision: 12 } emits an extended-sequential SOF1 frame
+// (its own optimal Huffman tables, since there are no standard 12-bit tables).
+// libjpeg-turbo decodes this output identically (cross-checked out-of-band).
+test('12-bit DCT encode emits SOF1 and round-trips near-losslessly', () => {
+  const w = 64;
+  const h = 48;
+  const gray = new Uint16Array(w * h); // 12-bit samples (0..4095)
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      gray[y * w + x] = Math.max(0, Math.min(4095, Math.round(2048 + 1800 * Math.sin(x / 9) + 1000 * Math.cos(y / 7))));
+    }
+  }
+  const jpg = encode({ width: w, height: h, components: [gray], precision: 12 }, { quality: 92 });
+  const c = decodeComponents(jpg);
+  assert.equal(c.startOfFrame, 0xc1, 'extended-sequential SOF1 frame');
+  assert.equal(c.precision, 12, 'decoded at 12-bit precision');
+  let sum = 0;
+  for (let i = 0; i < w * h; i++) sum += Math.abs(gray[i] - c.components[0][i]);
+  assert.ok(sum / (w * h) < 4, `12-bit DCT round-trip mean ${(sum / (w * h)).toFixed(1)} of 4095 at q92`);
+});
+
+test('DCT encode rejects unsupported precision (only 8 or 12)', () => {
+  const gray = new Uint16Array(64);
+  for (const p of [0, 7, 10, 13, 16]) {
+    assert.throws(
+      () => encode({ width: 8, height: 8, components: [gray], precision: p }, {}),
+      /precision must be 8 or 12/,
+      `precision ${p} should be rejected`,
+    );
+  }
+});
+
+// A frame with numberOfLines === 0 defers its height to a DNL marker after the
+// scan. Patch a normal encode to that streaming shape and confirm decode resolves
+// the height from DNL and produces identical pixels.
+test('DNL marker resolves a deferred (numberOfLines === 0) height', () => {
+  const w = 48;
+  const h = 32;
+  const original = encode({ width: w, height: h, data: makeScene(w, h), channels: 4 }, { quality: 85 });
+  const ref = decode(original).data;
+  const b = Array.from(original);
+  let sof = -1;
+  for (let i = 2; i + 1 < b.length; i++) { if (b[i] === 0xff && b[i + 1] === 0xc0) { sof = i; break; } }
+  b[sof + 5] = 0; // SOF numberOfLines (hi)
+  b[sof + 6] = 0; // SOF numberOfLines (lo)  -> height deferred to DNL
+  const dnl = [0xff, 0xdc, 0x00, 0x04, (h >> 8) & 0xff, h & 0xff]; // DNL carrying the real height
+  const eoi = b.length - 2;
+  const patched = new Uint8Array([...b.slice(0, eoi), ...dnl, ...b.slice(eoi)]);
+  const img = decode(patched);
+  assert.equal(img.height, h, 'height resolved from the DNL marker');
+  let max = 0;
+  for (let i = 0; i < ref.length; i++) max = Math.max(max, Math.abs(img.data[i] - ref[i]));
+  assert.equal(max, 0, 'pixels identical to a normal decode');
+});

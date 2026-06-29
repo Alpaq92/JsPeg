@@ -24,11 +24,11 @@ your own device.
 
 - **Decode** baseline, extended-sequential, progressive, lossless, and
   **arithmetic-coded** (SOF9/10) JPEG, at **8 or 12-bit** precision; 4:4:4 / 4:2:2 /
-  4:2:0 chroma subsampling; grayscale / YCbCr / RGB / CMYK; reads EXIF orientation
-  and any embedded **ICC profile**.
+  4:2:0 chroma subsampling; grayscale / YCbCr / RGB / CMYK; and reads **EXIF**
+  (tags + thumbnail), **XMP**, **IPTC** and **ICC** metadata.
 - **Encode** straight from pixels — baseline JPEG (standard or optimized Huffman),
-  **progressive** or **arithmetic** (SOF2 / SOF9 / SOF10), or truly **lossless**
-  (SOF3 — 7 spatial predictors, 8–16-bit precision, exact bit-for-bit round-trip).
+  **progressive** or **arithmetic** (SOF2 / SOF9 / SOF10), **12-bit DCT** (SOF1), or
+  truly **lossless** (SOF3 — 7 spatial predictors, 8–16-bit precision, exact round-trip).
 - **Optimize** an existing JPEG — losslessly re-code its Huffman tables, or
   transcode to **progressive** (successive approximation: renders incrementally
   *and* smaller) or **arithmetic** (SOF9, or SOF10 with `progressive`); or
@@ -86,8 +86,9 @@ node tools/serve.mjs     # serve the demo at http://localhost:8080
 
 Tests cover decode against frozen libjpeg conformance vectors (including both the
 SOF9 and SOF10 **arithmetic** vectors), dependency-free encode→decode round-trips
-over a broad set of sample images (baseline **and exact lossless SOF3**, all 7
-predictors), CMYK/YCCK and EXIF-orientation handling, and codec unit tests.
+over a broad set of sample images (baseline, **12-bit DCT**, **and exact lossless
+SOF3** across all 7 predictors), CMYK/YCCK, EXIF-orientation and **EXIF / XMP /
+IPTC + thumbnail** metadata handling, and codec unit tests.
 The optimizer is checked across all of its lossless modes — Huffman re-coding,
 baseline→**progressive**, and baseline→**arithmetic** (SOF9) transcodes, each one
 pixel-identical — plus the lossy **trellis** mode (valid, smaller, high-PSNR),
@@ -131,10 +132,14 @@ arithmetic — SOF9, or SOF10 with `progressive` (our output round-trips through
 libjpeg-turbo). Progressive (SOF2) is likewise available straight from `encode()`. **Lossless (SOF3)**
 is supported both ways — `encode({ lossless: true })` (predictors 1–7, **2–16-bit
 precision**) and decode, cross-checked against an independent lossless decoder
-(including a 12-bit round-trip). **12-bit DCT** (extended-sequential / progressive)
-decodes too — cross-checked against libjpeg-turbo. Embedded **ICC colour profiles**
-are read on decode (`decodeComponents().icc`) and can be embedded on encode
-(`encode({ icc })`). The
+(including a 12-bit round-trip). **12-bit DCT** decodes (extended-sequential /
+progressive) **and encodes** (`encode({ precision: 12 })` → SOF1, grayscale) — both
+cross-checked against libjpeg-turbo. Rich **metadata** is read on decode — **EXIF**
+tags + the embedded thumbnail, **XMP** and **IPTC** via `decodeComponents().metadata`
+(or the standalone `readMetadata()`), plus **ICC** profiles via `.icc` — and ICC can
+be embedded on encode (`encode(image, { icc })`). A **height-via-DNL** frame
+(`numberOfLines = 0`, with the real height deferred to a `DNL` marker) resolves its
+height automatically, and a **JFIF APP0** thumbnail is read when present. The
 differential / hierarchical frame types (SOF5–7 / SOF13–15) are out of scope:
 they exist only inside hierarchical mode (T.81 Annex J), which even libjpeg never
 implemented — so there is no reference decoder to verify an implementation against.

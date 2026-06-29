@@ -231,6 +231,13 @@ export class JpegDecoder {
       throwInvalidDataAt(reader.consumedByteCount, 'Multiple frame is not supported.');
     }
     this._frameHeader = r.value;
+    // A frame may declare numberOfLines === 0 and defer the real height to a DNL
+    // ("Define Number of Lines") marker after the first scan. Resolve it now, so
+    // the scan decoder and output writer are sized correctly.
+    if (r.value.numberOfLines === 0) {
+      const lines = resolveDnlHeight(this._inputBuffer, reader.consumedByteCount);
+      if (lines > 0) r.value.numberOfLines = lines;
+    }
   }
 
   _processScanHeader(reader, metadataOnly) {
@@ -488,4 +495,25 @@ function estimateQuality(quantizationTable, standardTable) {
 
 function throwInvalidDataAt(offset, message) {
   throw new Error(`Failed to decode JPEG data at offset ${offset}. ${message}`);
+}
+
+// Find the height carried by a DNL ("Define Number of Lines") marker, used when a
+// frame declares numberOfLines === 0. Walks the marker structure from `from`,
+// skipping length-prefixed segments and the entropy-coded scan data (FF00 byte
+// stuffing + RSTn). Returns 0 if no DNL is found before EOI / end of input.
+function resolveDnlHeight(buffer, from) {
+  const len = buffer.length;
+  let p = from;
+  while (p + 1 < len) {
+    if (buffer[p] !== 0xff) { p++; continue; }
+    let m = buffer[p + 1];
+    while (m === 0xff && p + 2 < len) { p++; m = buffer[p + 1]; } // skip fill bytes
+    if (m === 0x00 || isRestartMarker(m)) { p += 2; continue; } // FF00 stuffing / RSTn inside a scan
+    if (m === JpegMarker.DefineNumberOfLines) return p + 6 <= len ? ((buffer[p + 4] << 8) | buffer[p + 5]) : 0;
+    if (m === JpegMarker.EndOfImage) return 0; // EOI before any DNL
+    if (m === JpegMarker.StartOfImage || m === 0x01) { p += 2; continue; } // SOI / TEM carry no length
+    if (p + 4 > len) break;
+    p += 2 + ((buffer[p + 2] << 8) | buffer[p + 3]); // skip a length-prefixed segment (incl. the SOS header)
+  }
+  return 0;
 }
