@@ -1,7 +1,5 @@
 # JsPeg
 
-<img src="assets/icon.png" align="right" width="110" alt="JsPeg icon" />
-
 A **pure-JavaScript JPEG decoder, encoder & optimizer** — no native modules, no
 WebAssembly, and **zero dependencies**. Runs anywhere, in both Node and the browser.
 
