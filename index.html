@@ -65,7 +65,7 @@
 
       <section class="card" id="optimizePanel" hidden>
         <h2>Optimize — every mode, side by side</h2>
-        <p class="hint">Each mode re-encodes this baseline JPEG. The <strong>lossless</strong> modes keep the decoded pixels <em>identical</em> — only the file shrinks; <strong>trellis</strong> is lossy (it re-quantizes). The <strong>arithmetic</strong> streams are valid, smaller JPEGs that native browsers can't display (storage / interop only).</p>
+        <p class="hint">Each mode re-encodes this same baseline JPEG. The <strong>lossless</strong> modes keep the decoded pixels <em>byte-for-byte identical</em> — only the file shrinks; <strong>trellis</strong> is the lossy exception (it re-quantizes). The <strong>arithmetic</strong> streams are valid, smaller JPEGs that native browsers can't display (useful for storage / interop only).</p>
         <button id="optimizeBtn" type="button">Compare every optimize mode</button>
         <div id="optimizeResults" class="opt-results"></div>
       </section>
