@@ -22,7 +22,7 @@ export { JpegWriter } from './JpegWriter.js';
 export { JpegOptimizer } from './JpegOptimizer.js';
 export { encodeLossless } from './JpegLosslessEncoder.js';
 export { readIccProfile, iccApp2Segments } from './icc.js';
-export { readMetadata, readExif, readThumbnail, readXmp, readIptc } from './metadata.js';
+export { readMetadata, readExif, readThumbnail, readJfifThumbnail, readXmp, readIptc } from './metadata.js';
 export {
   componentsToRGBA, readAdobeTransform, rgbToYCbCrPlanes, rgbToGrayPlane, buildJfifApp0,
 } from './colorConverter.js';

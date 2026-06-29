@@ -10,6 +10,7 @@ const sig = (s) => Array.from(s, (c) => c.charCodeAt(0));
 const EXIF_SIG = sig('Exif\0\0');
 const XMP_SIG = sig('http://ns.adobe.com/xap/1.0/\0');
 const PHOTOSHOP_SIG = sig('Photoshop 3.0\0');
+const JFIF_SIG = sig('JFIF\0');
 
 // TIFF field type → byte size (0 for unknown/reserved types).
 const TYPE_SIZE = { 1: 1, 2: 1, 3: 2, 4: 4, 5: 8, 6: 1, 7: 1, 8: 2, 9: 4, 10: 8, 11: 4, 12: 8 };
@@ -215,18 +216,40 @@ function parseIptcDatasets(data, start, end) {
   return Object.keys(out).length ? out : null;
 }
 
+// --- JFIF APP0 thumbnail -----------------------------------------------------
+
+/**
+ * The optional uncompressed RGB thumbnail embedded in a JFIF APP0 segment, after
+ * the density fields. Rare — most JFIF segments carry no thumbnail.
+ * @returns {{ width: number, height: number, data: Uint8Array }|null} interleaved RGB
+ */
+export function readJfifThumbnail(data) {
+  const seg = findAppSegment(data, 0xe0, JFIF_SIG);
+  if (!seg) return null;
+  // after "JFIF\0": version(2) units(1) Xdensity(2) Ydensity(2) Xthumbnail(1) Ythumbnail(1) RGB…
+  const p = seg.start;
+  if (p + 9 > seg.end) return null;
+  const width = data[p + 7];
+  const height = data[p + 8];
+  const start = p + 9;
+  const size = width * height * 3;
+  if (width === 0 || height === 0 || start + size > seg.end) return null;
+  return { width, height, data: data.subarray(start, start + size) };
+}
+
 // --- aggregate ---------------------------------------------------------------
 
 /**
  * Read all supported metadata from a JPEG byte stream.
  * @param {Uint8Array} data
- * @returns {{ exif: object|null, thumbnail: Uint8Array|null, xmp: string|null, iptc: object|null }}
+ * @returns {{ exif: object|null, thumbnail: Uint8Array|null, jfifThumbnail: object|null, xmp: string|null, iptc: object|null }}
  */
 export function readMetadata(data) {
   const ctx = exifContext(data); // TIFF + IFD0 parsed once, shared by exif + thumbnail
   return {
     exif: ctx ? exifTags(ctx) : null,
     thumbnail: ctx ? exifThumbnail(ctx, data) : null,
+    jfifThumbnail: readJfifThumbnail(data),
     xmp: readXmp(data),
     iptc: readIptc(data),
   };

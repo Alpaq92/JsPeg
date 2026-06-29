@@ -45,6 +45,23 @@ test('decodeComponents().metadata exposes the same, parsed lazily on access', ()
   assert.equal(c.metadata.iptc['By-line'], 'Jane Doe');
 });
 
+test('JFIF APP0 RGB thumbnail is extracted', () => {
+  const tw = 2;
+  const th = 2;
+  const rgb = [10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120]; // 2x2 RGB
+  const sig = [...'JFIF\0'].map((c) => c.charCodeAt(0));
+  // version(2) units(1) Xdensity(2) Ydensity(2) Xthumb(1) Ythumb(1) RGB…
+  const body = [1, 1, 0, 0, 1, 0, 1, tw, th, ...rgb];
+  const len = 2 + sig.length + body.length;
+  const app0 = [0xff, 0xe0, (len >> 8) & 0xff, len & 0xff, ...sig, ...body];
+  const jpg = new Uint8Array([0xff, 0xd8, ...app0, 0xff, 0xd9]);
+  const thumb = readMetadata(jpg).jfifThumbnail;
+  assert.ok(thumb, 'thumbnail present');
+  assert.equal(thumb.width, tw);
+  assert.equal(thumb.height, th);
+  assert.deepEqual([...thumb.data], rgb);
+});
+
 test('XMP is decoded as UTF-8 (multibyte-safe)', () => {
   const sig = [...'http://ns.adobe.com/xap/1.0/\0'].map((c) => c.charCodeAt(0));
   const xml = '<x:xmpmeta><dc:title>café — δ</dc:title></x:xmpmeta>'; // é, em-dash, δ are multibyte

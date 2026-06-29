@@ -6,6 +6,29 @@ inverse DCT from [stb_image](https://github.com/nothings/stb) (public domain) an
 the EXIF-orientation reader adapted from [exifr](https://github.com/MikeKovarik/exifr)
 (MIT). It runs identically in Node and the browser.
 
+## Code provenance
+
+Roughly where the ~7.4k lines come from (by code line, blanks/comments excluded —
+the split is approximate, since a few files mix ported and original code):
+
+```mermaid
+pie showData title JsPeg code provenance (≈ lines of code)
+    "yigolden/JpegLibrary — MIT port" : 59
+    "Original — tightening, verification & optimization" : 27
+    "ITU-T T.81 — clean-room arithmetic + lossless encoders" : 11
+    "exifr — EXIF orientation" : 1
+    "stb_image — inverse DCT" : 1
+    "x264 notes — trellis" : 1
+```
+
+The **port** is the decoders, the baseline encoder and the optimizer core. The
+**original** slice is the convenience API, the clean-room utilities (fancy
+upsampling, ICC, EXIF/XMP/IPTC metadata, marker scanning, the exact forward DCT),
+the extra `optimize()` modes, the robustness work (DNL, precision validation), and
+the entire test suite. **T.81** covers the spec-derived encoders (QM-coder
+arithmetic, lossless SOF3, progressive). Everything is single-license MIT — see
+the [README notes](../README.md#notes).
+
 ## Public API (`src/index.js`)
 
 | Function | Does |

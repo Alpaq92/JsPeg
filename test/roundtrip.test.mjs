@@ -258,3 +258,26 @@ test('DCT encode rejects unsupported precision (only 8 or 12)', () => {
     );
   }
 });
+
+// A frame with numberOfLines === 0 defers its height to a DNL marker after the
+// scan. Patch a normal encode to that streaming shape and confirm decode resolves
+// the height from DNL and produces identical pixels.
+test('DNL marker resolves a deferred (numberOfLines === 0) height', () => {
+  const w = 48;
+  const h = 32;
+  const original = encode({ width: w, height: h, data: makeScene(w, h), channels: 4 }, { quality: 85 });
+  const ref = decode(original).data;
+  const b = Array.from(original);
+  let sof = -1;
+  for (let i = 2; i + 1 < b.length; i++) { if (b[i] === 0xff && b[i + 1] === 0xc0) { sof = i; break; } }
+  b[sof + 5] = 0; // SOF numberOfLines (hi)
+  b[sof + 6] = 0; // SOF numberOfLines (lo)  -> height deferred to DNL
+  const dnl = [0xff, 0xdc, 0x00, 0x04, (h >> 8) & 0xff, h & 0xff]; // DNL carrying the real height
+  const eoi = b.length - 2;
+  const patched = new Uint8Array([...b.slice(0, eoi), ...dnl, ...b.slice(eoi)]);
+  const img = decode(patched);
+  assert.equal(img.height, h, 'height resolved from the DNL marker');
+  let max = 0;
+  for (let i = 0; i < ref.length; i++) max = Math.max(max, Math.abs(img.data[i] - ref[i]));
+  assert.equal(max, 0, 'pixels identical to a normal decode');
+});
