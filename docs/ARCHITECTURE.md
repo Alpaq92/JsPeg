@@ -12,6 +12,7 @@ Roughly where the ~7.4k lines come from (by code line, blanks/comments excluded 
 the split is approximate, since a few files mix ported and original code):
 
 ```mermaid
+%%{init: {'theme': 'base', 'themeVariables': {'pie1': '#4c6ef5', 'pie2': '#40c057', 'pie3': '#be4bdb', 'pie4': '#15aabf', 'pie5': '#fab005', 'pie6': '#fa5252', 'pieSectionTextColor': '#ffffff', 'pieTitleTextColor': '#868e96', 'pieLegendTextColor': '#868e96'}}}%%
 pie showData title JsPeg code provenance (≈ lines of code)
     "yigolden/JpegLibrary — MIT port" : 59
     "Original — tightening, verification & optimization" : 27
@@ -28,6 +29,12 @@ the extra `optimize()` modes, the robustness work (DNL, precision validation), a
 the entire test suite. **T.81** covers the spec-derived encoders (QM-coder
 arithmetic, lossless SOF3, progressive). Everything is single-license MIT — see
 the [README notes](../README.md#notes).
+
+Slice colours are six evenly-spaced, complementary hues (shade 6) from the
+[Open Color](https://yeun.github.io/open-color/) palette: `pie1` indigo `#4c6ef5`,
+`pie2` green `#40c057`, `pie3` grape `#be4bdb`, `pie4` cyan `#15aabf`, `pie5`
+yellow `#fab005`, `pie6` red `#fa5252`. The title and legend use gray-6 `#868e96`
+— a mid-tone that stays legible on both light and dark GitHub themes.
 
 ## Public API (`src/index.js`)
 
