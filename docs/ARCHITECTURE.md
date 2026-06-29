@@ -8,11 +8,12 @@ the EXIF-orientation reader adapted from [exifr](https://github.com/MikeKovarik/
 
 ## Code provenance
 
-Roughly where the ~7.4k lines come from (by code line, blanks/comments excluded —
-the split is approximate, since a few files mix ported and original code):
+Roughly where the project's ~7.4k lines come from (measured by code line, with
+blanks/comments excluded — the split is approximate, since a few files mix both
+ported and original code):
 
 ```mermaid
-%%{init: {'theme': 'base', 'themeVariables': {'pie1': '#4c6ef5', 'pie2': '#40c057', 'pie3': '#be4bdb', 'pie4': '#15aabf', 'pieSectionTextColor': '#ffffff', 'pieTitleTextColor': '#868e96', 'pieLegendTextColor': '#868e96'}}}%%
+%%{init: {'theme': 'base', 'themeVariables': {'pie1': '#4c6ef5', 'pie2': '#40c057', 'pie3': '#be4bdb', 'pie4': '#fd7e14', 'pieSectionTextColor': '#ffffff', 'pieTitleTextColor': '#868e96', 'pieLegendTextColor': '#868e96'}}}%%
 pie showData title JsPeg code provenance (% of code lines)
     "yigolden/JpegLibrary — MIT port" : 59
     "Original — tightening, verification & optimization" : 27
@@ -31,9 +32,9 @@ the [README notes](../README.md#notes).
 The numbers are **percentages** of code lines. The three sub-1% donors (exifr,
 stb_image, x264) are merged into a single slice so their labels don't overlap.
 Slice colours are complementary hues (shade 6) from the [Open Color](https://yeun.github.io/open-color/)
-palette: `pie1` indigo `#4c6ef5`, `pie2` green `#40c057`, `pie3` grape `#be4bdb`,
-`pie4` cyan `#15aabf`; the title and legend use gray-6 `#868e96`, a mid-tone that
-stays legible on both light and dark GitHub themes.
+palette, one per colour family for contrast: `pie1` indigo `#4c6ef5`, `pie2` green
+`#40c057`, `pie3` grape `#be4bdb`, `pie4` orange `#fd7e14`. The title and legend use
+gray-6 `#868e96`, a mid-tone that stays legible on both light and dark GitHub themes.
 
 ## Public API (`src/index.js`)
 
