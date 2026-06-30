@@ -5,13 +5,16 @@ WebAssembly, and **zero dependencies**. Runs anywhere, in both Node and the brow
 
 What started as a faithful port of the C# library
 **[yigolden/JpegLibrary](https://github.com/yigolden/JpegLibrary)** (MIT) grew into
-a comprehensive JPEG toolset, imbued with DNA from
-**[stb_image](https://github.com/nothings/stb)** (public-domain inverse DCT),
-**[exifr](https://github.com/MikeKovarik/exifr)** (EXIF orientation), the
+a comprehensive JPEG toolset — part borrowed DNA, part our own invention. The borrowed
+strands come from **[stb_image](https://github.com/nothings/stb)** (public-domain
+inverse DCT), **[exifr](https://github.com/MikeKovarik/exifr)** (EXIF orientation), the
 **ITU-T T.81** specification (a clean-room arithmetic coder), and
 **[Loren Merritt's x264 trellis notes](http://akuvian.org/src/x264/trellis.txt)**
-(rate-distortion trellis quantization). Every code- and spec-donor was chosen so
-JsPeg stays **single-license MIT** — see [the Notes](#notes).
+(rate-distortion trellis quantization). The rest — [roughly a quarter of the
+code](docs/ARCHITECTURE.md#code-provenance) — is ours: the tightening and verification,
+the extra `optimize()` modes, the metadata, ICC and chroma-upsampling utilities, and the
+entire test suite. Every code- and spec-donor was chosen so JsPeg stays
+**single-license MIT** — see [the Notes](#notes).
 
 The project icon (`assets/icon.svg`, `assets/icon.png`) is a
 [Tabler](https://tabler.io/icons) photo glyph (MIT) recoloured in
