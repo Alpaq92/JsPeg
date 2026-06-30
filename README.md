@@ -34,9 +34,10 @@ your own device.
   **arithmetic-coded** (SOF9/10) JPEG, at **8 or 12-bit** precision; 4:4:4 / 4:2:2 /
   4:2:0 chroma subsampling; grayscale / YCbCr / RGB / CMYK; and reads **EXIF**
   (tags + thumbnail), **XMP**, **IPTC** and **ICC** metadata.
-- **Encode** straight from pixels — baseline JPEG (standard or optimized Huffman),
-  **progressive** or **arithmetic** (SOF2 / SOF9 / SOF10), **12-bit DCT** (SOF1), or
-  truly **lossless** (SOF3 — 7 spatial predictors, 8–16-bit precision, exact round-trip).
+- **Encode** straight from raw RGBA pixels — baseline JPEG (with standard or optimized
+  Huffman tables), **progressive** or **arithmetic** (SOF2 / SOF9 / SOF10), **12-bit DCT**
+  (SOF1), or truly **lossless** (SOF3 — 7 spatial predictors, 8–16-bit precision, an exact
+  bit-for-bit round-trip).
 - **Optimize** an existing JPEG — losslessly re-code its Huffman tables, or
   transcode to **progressive** (successive approximation: renders incrementally
   *and* smaller) or **arithmetic** (SOF9, or SOF10 with `progressive`); or
